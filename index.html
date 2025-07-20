@@ -2,44 +2,74 @@
 <html lang="de">
 <head>
   <meta charset="UTF-8">
-  <title>Geburtstagsgruß für Natalia</title>
+  <title>Jellys Geburtstagsgruß für Natalia</title>
   <style>
     body {
-      font-family: Arial, sans-serif;
+      margin: 0;
+      font-family: Comic Sans MS, sans-serif;
+      background: linear-gradient(to bottom, #88e0ef 0%, #1b6ca8 100%);
+      overflow: hidden;
       text-align: center;
-      background: #f2f2f2;
-      padding: 50px;
+      color: white;
     }
-    img {
-      width: 200px;
-      border-radius: 50%;
-      animation: blink 5s infinite;
+    h1 {
+      margin-top: 30px;
+      font-size: 2em;
+      text-shadow: 1px 1px 3px black;
     }
-    @keyframes blink {
-      0%, 100% { opacity: 1; }
-      50% { opacity: 0.9; }
+    #scene {
+      position: relative;
+      width: 100%;
+      height: 400px;
+      background-image: url('https://i.imgur.com/v5UFTUO.png'); /* Südsee-Fisch-Hintergrund */
+      background-size: cover;
+      background-position: center;
+    }
+    #avatar {
+      position: absolute;
+      width: 150px;
+      top: 100px;
+      left: 50%;
+      transform: translateX(-50%);
+      animation: float 5s ease-in-out infinite;
+    }
+    @keyframes float {
+      0%, 100% { transform: translateX(-50%) translateY(0); }
+      50% { transform: translateX(-50%) translateY(-20px); }
     }
     button {
-      padding: 10px 20px;
       margin-top: 20px;
-      font-size: 16px;
+      padding: 10px 20px;
+      font-size: 18px;
+      border: none;
+      border-radius: 10px;
+      background-color: #ff69b4;
+      color: white;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #ff1493;
     }
   </style>
 </head>
 <body>
+
   <h1>🎉 Alles Gute zum Geburtstag, Natalia! 🎉</h1>
-  <img src="https://i.imgur.com/9M7bFfe.png" alt="Avatar">
-  <p id="message">Klick auf den Button, um deinen Geburtstagsgruß zu hören!</p>
-  <button onclick="playGreeting()">Gruß abspielen</button>
+  <div id="scene">
+    <img id="avatar" src="https://i.imgur.com/Kq5F8Ey.png" alt="Glänzende Qualle">
+  </div>
+  <button onclick="playGreeting()">Gruß abspielen 🪼</button>
 
   <script>
     function playGreeting() {
       const msg = new SpeechSynthesisUtterance();
-      msg.text = "Hallo Natalia! Ich bin dein digitaler Geburtstagsgruß. Ich wünsche dir ganz viel Freude, Lachen und natürlich Kuchen!";
+      msg.text = "Hallo Nataliaaa! Ich bin Jelly, deine Geburtstagsqualle aus der Südsee! Ich wünsche dir Glitzer, Fischkuchen und ein Meer voller Lachen! Happy Birthday!";
       msg.lang = 'de-DE';
-      msg.rate = 1;
+      msg.pitch = 2; // Hoher Ton = Comic-Stimme
+      msg.rate = 1.2;
       speechSynthesis.speak(msg);
     }
   </script>
+
 </body>
 </html>
