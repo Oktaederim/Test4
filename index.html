@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <title>Geburtstagsgruß für Natalia</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      background: #f2f2f2;
+      padding: 50px;
+    }
+    img {
+      width: 200px;
+      border-radius: 50%;
+      animation: blink 5s infinite;
+    }
+    @keyframes blink {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.9; }
+    }
+    button {
+      padding: 10px 20px;
+      margin-top: 20px;
+      font-size: 16px;
+    }
+  </style>
+</head>
+<body>
+  <h1>🎉 Alles Gute zum Geburtstag, Natalia! 🎉</h1>
+  <img src="https://i.imgur.com/9M7bFfe.png" alt="Avatar">
+  <p id="message">Klick auf den Button, um deinen Geburtstagsgruß zu hören!</p>
+  <button onclick="playGreeting()">Gruß abspielen</button>
+
+  <script>
+    function playGreeting() {
+      const msg = new SpeechSynthesisUtterance();
+      msg.text = "Hallo Natalia! Ich bin dein digitaler Geburtstagsgruß. Ich wünsche dir ganz viel Freude, Lachen und natürlich Kuchen!";
+      msg.lang = 'de-DE';
+      msg.rate = 1;
+      speechSynthesis.speak(msg);
+    }
+  </script>
+</body>
+</html>
