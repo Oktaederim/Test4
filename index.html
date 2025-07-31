@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Feuchtigkeitsrechner</title>
+    <title>Feuchtigkeitsrechner mit Taupunkt</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -34,10 +34,10 @@
 </head>
 <body class="bg-gray-50 text-gray-800">
 
-    <main class="container mx-auto p-4 sm:p-6 lg:p-8 max-w-4xl">
+    <main class="container mx-auto p-4 sm:p-6 lg:p-8 max-w-5xl">
         <div class="bg-white p-6 sm:p-8 rounded-xl shadow-lg no-print">
             <h1 class="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">Feuchtigkeitsrechner</h1>
-            <p class="text-gray-600 mb-6">Geben Sie die Ausgangswerte ein, um die Änderung der relativen Luftfeuchtigkeit bei Temperaturschwankungen zu berechnen.</p>
+            <p class="text-gray-600 mb-6">Berechnen Sie die Änderung der relativen Luftfeuchtigkeit, den Taupunkt und die spezifische Feuchte bei Temperaturschwankungen.</p>
 
             <!-- Eingabeformular -->
             <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-4">
@@ -75,8 +75,14 @@
         <!-- Ergebnis-Container -->
         <div id="results-container" class="hidden mt-8 bg-white p-6 sm:p-8 rounded-xl shadow-lg">
              <h2 class="text-xl sm:text-2xl font-bold text-gray-900 mb-4">Ergebnisse</h2>
+             
+             <!-- Taupunkt Anzeige -->
+             <div class="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                <p class="text-gray-800 text-center text-lg">Taupunkttemperatur: <strong id="dew-point-value" class="text-blue-700 font-bold"></strong></p>
+             </div>
+
              <p class="mb-6 text-gray-600">
-                Die absolute Feuchtigkeit bleibt konstant, während sich die relative Feuchtigkeit mit der Temperatur ändert. Ein Wert von über 100% rF bedeutet, dass Kondenswasser (Taupunkt) entsteht.
+                Die spezifische Feuchte, die absolute Feuchte und der Taupunkt bleiben konstant, solange keine Feuchtigkeit hinzugefügt oder entfernt wird. Fällt die Temperatur unter den Taupunkt, beginnt die Luft zu kondensieren und die relative Feuchtigkeit erreicht 100%.
              </p>
             <div class="overflow-x-auto">
                 <table class="min-w-full divide-y divide-gray-200">
@@ -85,6 +91,7 @@
                             <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Temperatur (°C)</th>
                             <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Relative Feuchte (%)</th>
                             <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Absolute Feuchte (g/m³)</th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Spezifische Feuchte (g/kg)</th>
                         </tr>
                     </thead>
                     <tbody id="results-body" class="bg-white divide-y divide-gray-200">
@@ -106,6 +113,7 @@
         const resultsBody = document.getElementById('results-body');
         const errorMessage = document.getElementById('error-message');
         const errorText = document.getElementById('error-text');
+        const dewPointValueEl = document.getElementById('dew-point-value');
 
         /**
          * Berechnet den Sättigungsdampfdruck mit der Magnus-Formel.
@@ -117,20 +125,42 @@
         }
 
         /**
-         * Berechnet die absolute Feuchtigkeit.
+         * Berechnet die absolute Feuchtigkeit (Wasserdampfdichte).
          * @param {number} temp - Temperatur in Grad Celsius.
          * @param {number} vaporPressure - Aktueller Dampfdruck in hPa.
          * @returns {number} Absolute Feuchtigkeit in g/m³.
          */
         function getAbsoluteHumidity(temp, vaporPressure) {
-            // Umrechnung von hPa zu Pa (1 hPa = 100 Pa)
             const vaporPressurePa = vaporPressure * 100;
-            // Temperatur in Kelvin
             const tempKelvin = temp + 273.15;
-            // Spezifische Gaskonstante für Wasserdampf (Rv) in J/(kg·K)
-            const R_v = 461.52;
-            // Dichte in kg/m³, dann Umrechnung in g/m³ (* 1000)
+            const R_v = 461.52; // Spezifische Gaskonstante für Wasserdampf in J/(kg·K)
             return (vaporPressurePa / (R_v * tempKelvin)) * 1000;
+        }
+
+        /**
+         * Berechnet die spezifische Feuchte (Wassergehalt).
+         * @param {number} vaporPressure - Aktueller Dampfdruck in hPa.
+         * @returns {number} Spezifische Feuchte in g/kg trockener Luft.
+         */
+        function getSpecificHumidity(vaporPressure) {
+            // Annahme: Standard-Atmosphärendruck auf Meereshöhe
+            const totalPressure = 1013.25; // in hPa
+            // Formel für den Wassergehalt x = 0.622 * (pd / (p - pd))
+            const mixingRatio = 0.622 * (vaporPressure / (totalPressure - vaporPressure));
+            // Umrechnung von kg/kg in g/kg
+            return mixingRatio * 1000;
+        }
+        
+        /**
+         * Berechnet die Taupunkttemperatur.
+         * @param {number} actualVaporPressure - Der aktuelle Dampfdruck in hPa.
+         * @returns {number} Die Taupunkttemperatur in Grad Celsius.
+         */
+        function getDewPoint(actualVaporPressure) {
+            // Umkehrung der Magnus-Formel zur Berechnung des Taupunkts
+            const numerator = 243.5 * Math.log(actualVaporPressure / 6.112);
+            const denominator = 17.67 - Math.log(actualVaporPressure / 6.112);
+            return numerator / denominator;
         }
 
         // Event-Listener für den Berechnen-Button
@@ -164,47 +194,42 @@
             }
 
             // --- Berechnungen ---
-            // 1. Sättigungsdampfdruck bei Ausgangstemperatur berechnen
             const initialSaturationVaporPressure = getSaturationVaporPressure(initialTemp);
-            
-            // 2. Aktuellen (realen) Dampfdruck berechnen. Dieser Wert bleibt konstant.
             const actualVaporPressure = initialSaturationVaporPressure * (initialRh / 100);
-            
-            // 3. Absolute Feuchtigkeit berechnen. Dieser Wert bleibt ebenfalls konstant.
             const absoluteHumidity = getAbsoluteHumidity(initialTemp, actualVaporPressure);
-
-            // Vorherige Ergebnisse löschen
+            const specificHumidity = getSpecificHumidity(actualVaporPressure);
+            const dewPoint = getDewPoint(actualVaporPressure);
+            
+            dewPointValueEl.textContent = `${dewPoint.toFixed(1)} °C`;
             resultsBody.innerHTML = '';
             
-            // 4. Durch den Temperaturbereich iterieren und Ergebnisse berechnen
             const startTemp = initialTemp - tempRange;
             const endTemp = initialTemp + tempRange;
 
             for (let temp = startTemp; temp <= endTemp; temp++) {
-                // Sättigungsdampfdruck für die neue Temperatur berechnen
                 const newSaturationVaporPressure = getSaturationVaporPressure(temp);
-                
-                // Neue relative Feuchtigkeit berechnen
                 let newRh = (actualVaporPressure / newSaturationVaporPressure) * 100;
                 
-                // CSS-Klasse für Hervorhebung bei Kondensation
                 let rhClass = '';
-                if (newRh > 100) {
-                    newRh = 100; // rF kann nicht über 100% steigen
+                if (temp <= dewPoint) {
+                    newRh = 100;
                     rhClass = 'font-bold text-blue-600';
                 }
 
-                // Neue Zeile für die Tabelle erstellen
                 const row = document.createElement('tr');
+                if (Math.abs(temp - dewPoint) < 0.5) {
+                    row.classList.add('bg-blue-50');
+                }
+
                 row.innerHTML = `
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-800">${temp.toFixed(1)}</td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-800 ${rhClass}">${newRh.toFixed(1)}</td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-800">${absoluteHumidity.toFixed(2)}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-800">${specificHumidity.toFixed(2)}</td>
                 `;
                 resultsBody.appendChild(row);
             }
             
-            // Ergebnisse anzeigen und Drucken-Button einblenden
             resultsContainer.classList.remove('hidden');
             printBtn.classList.remove('hidden');
         });
