@@ -3,241 +3,291 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Feuchtigkeitsrechner mit Taupunkt</title>
+    <title>Filterbestands-Anwendung</title>
+    <!-- Tailwind CSS for styling -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- SheetJS library for reading Excel files -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
+        /* Custom styles for better look and feel */
         body {
             font-family: 'Inter', sans-serif;
         }
-        /* Stile für den Druck */
+        .table-container {
+            max-height: 60vh; /* Set a max height for the table container */
+            overflow-y: auto; /* Enable vertical scrolling */
+        }
         @media print {
-            body {
-                -webkit-print-color-adjust: exact;
-                print-color-adjust: exact;
+            /* Hide UI elements that shouldn't be printed */
+            body * {
+                visibility: hidden;
             }
-            .no-print {
-                display: none !important;
+            #print-section, #print-section * {
+                visibility: visible;
             }
-            #results-container {
-                display: block !important;
-                box-shadow: none !important;
-                border: 1px solid #ccc;
+            #print-section {
+                position: absolute;
+                left: 0;
+                top: 0;
+                width: 100%;
             }
-            main {
-                padding: 0;
+            /* Ensure table styles are maintained for printing */
+            table {
+                width: 100%;
+                border-collapse: collapse;
+            }
+            th, td {
+                border: 1px solid #ddd;
+                padding: 8px;
+                text-align: left;
+            }
+            th {
+                background-color: #f2f2f2;
             }
         }
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
     </style>
 </head>
-<body class="bg-gray-50 text-gray-800">
+<body class="bg-gray-100 text-gray-800 p-4 sm:p-6 md:p-8">
 
-    <main class="container mx-auto p-4 sm:p-6 lg:p-8 max-w-5xl">
-        <div class="bg-white p-6 sm:p-8 rounded-xl shadow-lg no-print">
-            <h1 class="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">Feuchtigkeitsrechner</h1>
-            <p class="text-gray-600 mb-6">Berechnen Sie die Änderung der relativen Luftfeuchtigkeit, den Taupunkt und die spezifische Feuchte bei Temperaturschwankungen.</p>
+    <div class="max-w-7xl mx-auto bg-white rounded-xl shadow-lg p-6 md:p-8">
+        
+        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6">
+            <h1 class="text-2xl md:text-3xl font-bold text-gray-900">Filterbestands-Anwendung</h1>
+            <button id="printButton" class="mt-4 sm:mt-0 bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg shadow-md transition duration-300 ease-in-out disabled:bg-gray-400 disabled:cursor-not-allowed" disabled>
+                Drucken
+            </button>
+        </div>
 
-            <!-- Eingabeformular -->
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-4">
-                <div>
-                    <label for="temp-initial" class="block text-sm font-medium text-gray-700 mb-1">Ausgangstemperatur (°C)</label>
-                    <input type="number" id="temp-initial" value="20" class="w-full p-3 bg-gray-100 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition">
-                </div>
-                <div>
-                    <label for="rh-initial" class="block text-sm font-medium text-gray-700 mb-1">Relative Luftfeuchte (%)</label>
-                    <input type="number" id="rh-initial" value="50" class="w-full p-3 bg-gray-100 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition">
-                </div>
-                <div>
-                    <label for="temp-range" class="block text-sm font-medium text-gray-700 mb-1">Temperaturbereich (+/- °C)</label>
-                    <input type="number" id="temp-range" value="5" class="w-full p-3 bg-gray-100 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition">
-                </div>
+        <!-- File Input and Filters Section -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
+            <!-- File Upload -->
+            <div>
+                <label for="file-upload" class="block text-sm font-medium text-gray-700 mb-1">Excel-Datei auswählen</label>
+                <input id="file-upload" type="file" accept=".xlsx, .xls" class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"/>
             </div>
-            
-            <!-- Fehlermeldung -->
-            <div id="error-message" class="hidden bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg relative mb-4" role="alert">
-                <strong class="font-bold">Fehler:</strong>
-                <span class="block sm:inline" id="error-text"></span>
+            <!-- Search Input -->
+            <div>
+                <label for="search-input" class="block text-sm font-medium text-gray-700 mb-1">Freitextsuche</label>
+                <input type="text" id="search-input" placeholder="Alle Spalten durchsuchen..." class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500" disabled>
             </div>
-
-            <!-- Buttons -->
-            <div class="flex flex-col sm:flex-row gap-4 mt-6">
-                <button id="calculate-btn" class="w-full sm:w-auto bg-blue-600 text-white font-bold py-3 px-6 rounded-lg hover:bg-blue-700 transition-colors duration-300 shadow-md">
-                    Berechnen
-                </button>
-                <button id="print-btn" class="w-full sm:w-auto bg-gray-600 text-white font-bold py-3 px-6 rounded-lg hover:bg-gray-700 transition-colors duration-300 shadow-md hidden">
-                    Ergebnisse drucken
-                </button>
+            <!-- Building Filter -->
+            <div>
+                <label for="building-filter" class="block text-sm font-medium text-gray-700 mb-1">Gebäude</label>
+                <select id="building-filter" class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500" disabled>
+                    <option value="">Alle Gebäude</option>
+                </select>
+            </div>
+            <!-- RLT-Anlagen Filter -->
+            <div>
+                <label for="rlt-filter" class="block text-sm font-medium text-gray-700 mb-1">RLT-Anlagen</label>
+                <select id="rlt-filter" class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500" disabled>
+                    <option value="">Alle Anlagen</option>
+                </select>
             </div>
         </div>
 
-        <!-- Ergebnis-Container -->
-        <div id="results-container" class="hidden mt-8 bg-white p-6 sm:p-8 rounded-xl shadow-lg">
-             <h2 class="text-xl sm:text-2xl font-bold text-gray-900 mb-4">Ergebnisse</h2>
-             
-             <!-- Taupunkt Anzeige -->
-             <div class="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                <p class="text-gray-800 text-center text-lg">Taupunkttemperatur: <strong id="dew-point-value" class="text-blue-700 font-bold"></strong></p>
-             </div>
-
-             <p class="mb-6 text-gray-600">
-                Die spezifische Feuchte, die absolute Feuchte und der Taupunkt bleiben konstant, solange keine Feuchtigkeit hinzugefügt oder entfernt wird. Fällt die Temperatur unter den Taupunkt, beginnt die Luft zu kondensieren. Die Berechnung der spezifischen Feuchte basiert auf Standard-Luftdruck (1013,25 hPa).
-             </p>
-            <div class="overflow-x-auto">
-                <table class="min-w-full divide-y divide-gray-200">
-                    <thead class="bg-gray-50">
-                        <tr>
-                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Temperatur (°C)</th>
-                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Relative Feuchte (%)</th>
-                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 tracking-wider">ABSOLUTE FEUCHTE (g/m³)</th>
-                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 tracking-wider">SPEZIFISCHE FEUCHTE (g/kg)</th>
-                        </tr>
+        <!-- Data Table Section -->
+        <div id="table-container" class="table-container border border-gray-200 rounded-lg">
+            <div id="print-section">
+                <h2 id="print-title" class="text-xl font-bold text-center my-4 hidden">Gefilterte Filterliste</h2>
+                <table id="data-table" class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50 sticky top-0">
+                        <!-- Table headers will be inserted here by JavaScript -->
                     </thead>
-                    <tbody id="results-body" class="bg-white divide-y divide-gray-200">
-                        <!-- Ergebniszeilen werden hier eingefügt -->
+                    <tbody class="bg-white divide-y divide-gray-200">
+                        <!-- Table rows will be inserted here by JavaScript -->
+                        <tr>
+                            <td colspan="9" class="text-center p-8 text-gray-500">Bitte laden Sie eine Excel-Datei hoch, um die Daten anzuzeigen.</td>
+                        </tr>
                     </tbody>
                 </table>
             </div>
         </div>
-    </main>
+        <div id="row-count" class="text-right mt-2 text-sm text-gray-600"></div>
+
+    </div>
 
     <script>
-        // DOM-Elemente abrufen
-        const initialTempInput = document.getElementById('temp-initial');
-        const initialRhInput = document.getElementById('rh-initial');
-        const tempRangeInput = document.getElementById('temp-range');
-        const calculateBtn = document.getElementById('calculate-btn');
-        const printBtn = document.getElementById('print-btn');
-        const resultsContainer = document.getElementById('results-container');
-        const resultsBody = document.getElementById('results-body');
-        const errorMessage = document.getElementById('error-message');
-        const errorText = document.getElementById('error-text');
-        const dewPointValueEl = document.getElementById('dew-point-value');
+        // Global variable to store the parsed data from the Excel file
+        let tableData = [];
+        const fileUpload = document.getElementById('file-upload');
+        const searchInput = document.getElementById('search-input');
+        const buildingFilter = document.getElementById('building-filter');
+        const rltFilter = document.getElementById('rlt-filter');
+        const dataTable = document.getElementById('data-table');
+        const printButton = document.getElementById('printButton');
+        const rowCount = document.getElementById('row-count');
+        const printTitle = document.getElementById('print-title');
 
         /**
-         * Berechnet den Sättigungsdampfdruck mit der Magnus-Formel.
-         * @param {number} temp - Temperatur in Grad Celsius.
-         * @returns {number} Sättigungsdampfdruck in hPa.
+         * Handles the file upload event.
+         * Reads the selected Excel file and processes its content.
          */
-        function getSaturationVaporPressure(temp) {
-            return 6.112 * Math.exp((17.67 * temp) / (temp + 243.5));
-        }
-
-        /**
-         * Berechnet die absolute Feuchtigkeit (Wasserdampfdichte).
-         * @param {number} temp - Temperatur in Grad Celsius.
-         * @param {number} vaporPressure - Aktueller Dampfdruck in hPa.
-         * @returns {number} Absolute Feuchtigkeit in g/m³.
-         */
-        function getAbsoluteHumidity(temp, vaporPressure) {
-            const vaporPressurePa = vaporPressure * 100;
-            const tempKelvin = temp + 273.15;
-            const R_v = 461.52; // Spezifische Gaskonstante für Wasserdampf in J/(kg·K)
-            return (vaporPressurePa / (R_v * tempKelvin)) * 1000;
-        }
-
-        /**
-         * Berechnet die spezifische Feuchte (Wassergehalt).
-         * @param {number} vaporPressure - Aktueller Dampfdruck in hPa.
-         * @returns {number} Spezifische Feuchte in g/kg trockener Luft.
-         */
-        function getSpecificHumidity(vaporPressure) {
-            // Annahme: Standard-Atmosphärendruck auf Meereshöhe
-            const totalPressure = 1013.25; // in hPa
-            // Formel für den Wassergehalt x = 0.622 * (pd / (p - pd))
-            const mixingRatio = 0.622 * (vaporPressure / (totalPressure - vaporPressure));
-            // Umrechnung von kg/kg in g/kg
-            return mixingRatio * 1000;
-        }
-        
-        /**
-         * Berechnet die Taupunkttemperatur.
-         * @param {number} actualVaporPressure - Der aktuelle Dampfdruck in hPa.
-         * @returns {number} Die Taupunkttemperatur in Grad Celsius.
-         */
-        function getDewPoint(actualVaporPressure) {
-            // Umkehrung der Magnus-Formel zur Berechnung des Taupunkts
-            const numerator = 243.5 * Math.log(actualVaporPressure / 6.112);
-            const denominator = 17.67 - Math.log(actualVaporPressure / 6.112);
-            return numerator / denominator;
-        }
-
-        // Event-Listener für den Berechnen-Button
-        calculateBtn.addEventListener('click', () => {
-            // Eingabewerte abrufen und in Zahlen umwandeln
-            const initialTemp = parseFloat(initialTempInput.value);
-            const initialRh = parseFloat(initialRhInput.value);
-            const tempRange = parseFloat(tempRangeInput.value);
-            
-            // --- Eingabevalidierung ---
-            errorMessage.classList.add('hidden');
-            if (isNaN(initialTemp) || isNaN(initialRh) || isNaN(tempRange)) {
-                errorText.textContent = 'Bitte geben Sie in alle Felder gültige Zahlen ein.';
-                errorMessage.classList.remove('hidden');
-                return;
-            }
-            if (initialRh < 0 || initialRh > 100) {
-                errorText.textContent = 'Die relative Luftfeuchtigkeit muss zwischen 0 und 100 % liegen.';
-                errorMessage.classList.remove('hidden');
-                return;
-            }
-             if (initialTemp < -50 || initialTemp > 100) {
-                errorText.textContent = 'Die Temperatur muss in einem realistischen Bereich liegen (-50°C bis 100°C).';
-                errorMessage.classList.remove('hidden');
-                return;
-            }
-            if (tempRange < 0) {
-                errorText.textContent = 'Der Temperaturbereich darf nicht negativ sein.';
-                errorMessage.classList.remove('hidden');
+        fileUpload.addEventListener('change', (event) => {
+            const file = event.target.files[0];
+            if (!file) {
                 return;
             }
 
-            // --- Berechnungen ---
-            const initialSaturationVaporPressure = getSaturationVaporPressure(initialTemp);
-            const actualVaporPressure = initialSaturationVaporPressure * (initialRh / 100);
-            const absoluteHumidity = getAbsoluteHumidity(initialTemp, actualVaporPressure);
-            const specificHumidity = getSpecificHumidity(actualVaporPressure);
-            const dewPoint = getDewPoint(actualVaporPressure);
-            
-            dewPointValueEl.textContent = `${dewPoint.toFixed(1)} °C`;
-            resultsBody.innerHTML = '';
-            
-            const startTemp = initialTemp - tempRange;
-            const endTemp = initialTemp + tempRange;
-
-            for (let temp = startTemp; temp <= endTemp; temp++) {
-                const newSaturationVaporPressure = getSaturationVaporPressure(temp);
-                let newRh = (actualVaporPressure / newSaturationVaporPressure) * 100;
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const data = new Uint8Array(e.target.result);
+                const workbook = XLSX.read(data, { type: 'array' });
+                const firstSheetName = workbook.SheetNames[0];
+                const worksheet = workbook.Sheets[firstSheetName];
+                // Convert sheet to JSON, using header option 1 to get an array of arrays
+                const json_data = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
                 
-                let rhClass = '';
-                if (temp <= dewPoint) {
-                    newRh = 100;
-                    rhClass = 'font-bold text-blue-600';
-                }
+                if (json_data.length > 1) {
+                    const headers = json_data[0].map(h => h.trim()); // Trim whitespace from headers
+                    tableData = json_data.slice(1).map(row => {
+                        let rowData = {};
+                        headers.forEach((header, index) => {
+                            rowData[header] = row[index];
+                        });
+                        return rowData;
+                    });
 
-                const row = document.createElement('tr');
-                if (Math.abs(temp - dewPoint) < 0.5) {
-                    row.classList.add('bg-blue-50');
+                    // Enable UI elements after data is loaded
+                    enableControls();
+                    populateFilters();
+                    renderTable(tableData);
+                } else {
+                    // Handle empty or invalid sheet
+                    dataTable.querySelector('tbody').innerHTML = `<tr><td colspan="9" class="text-center p-8 text-gray-500">Die ausgewählte Datei ist leer oder hat ein ungültiges Format.</td></tr>`;
                 }
+            };
+            reader.readAsArrayBuffer(file);
+        });
 
-                row.innerHTML = `
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-800">${temp.toFixed(1)}</td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-800 ${rhClass}">${newRh.toFixed(1)}</td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-800">${absoluteHumidity.toFixed(2)}</td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-800">${specificHumidity.toFixed(2)}</td>
-                `;
-                resultsBody.appendChild(row);
+        /**
+         * Enables filter and search controls once data is loaded.
+         */
+        function enableControls() {
+            searchInput.disabled = false;
+            buildingFilter.disabled = false;
+            rltFilter.disabled = false;
+            printButton.disabled = false;
+        }
+
+        /**
+         * Populates the filter dropdowns with unique values from the data.
+         */
+        function populateFilters() {
+            // *** UPDATED *** Using 'RLT-Anlagen' to match the user's Excel file
+            const buildings = [...new Set(tableData.map(item => item['Gebäude']).filter(Boolean))].sort();
+            const rlts = [...new Set(tableData.map(item => item['RLT-Anlagen']).filter(Boolean))].sort();
+
+            // Clear previous options
+            buildingFilter.innerHTML = '<option value="">Alle Gebäude</option>';
+            rltFilter.innerHTML = '<option value="">Alle Anlagen</option>';
+
+            buildings.forEach(building => {
+                const option = document.createElement('option');
+                option.value = building;
+                option.textContent = building;
+                buildingFilter.appendChild(option);
+            });
+
+            rlts.forEach(rlt => {
+                const option = document.createElement('option');
+                option.value = rlt;
+                option.textContent = rlt;
+                rltFilter.appendChild(option);
+            });
+        }
+
+        /**
+         * Renders the data table with the provided data rows.
+         * @param {Array} data - The array of data objects to render.
+         */
+        function renderTable(data) {
+            const tbody = dataTable.querySelector('tbody');
+            const thead = dataTable.querySelector('thead');
+            tbody.innerHTML = ''; // Clear existing rows
+            thead.innerHTML = ''; // Clear existing headers
+
+            if (data.length === 0) {
+                const headerCount = thead.getElementsByTagName('th').length || 9;
+                tbody.innerHTML = `<tr><td colspan="${headerCount}" class="text-center p-8 text-gray-500">Keine Ergebnisse gefunden.</td></tr>`;
+                rowCount.textContent = '0 Zeilen angezeigt';
+                return;
             }
-            
-            resultsContainer.classList.remove('hidden');
-            printBtn.classList.remove('hidden');
+
+            // Create table headers from the keys of the first data object
+            const headers = Object.keys(data[0]);
+            const headerRow = document.createElement('tr');
+            headers.forEach(headerText => {
+                const th = document.createElement('th');
+                th.textContent = headerText;
+                th.className = 'px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider';
+                headerRow.appendChild(th);
+            });
+            thead.appendChild(headerRow);
+
+            // Create table rows
+            data.forEach(row => {
+                const tr = document.createElement('tr');
+                tr.className = 'hover:bg-gray-50';
+                headers.forEach(header => {
+                    const td = document.createElement('td');
+                    td.textContent = row[header] || ''; // Handle undefined or null values
+                    td.className = 'px-6 py-4 whitespace-nowrap text-sm text-gray-700';
+                    tr.appendChild(td);
+                });
+                tbody.appendChild(tr);
+            });
+
+            rowCount.textContent = `${data.length} Zeile(n) angezeigt`;
+        }
+
+        /**
+         * Filters the table data based on current search and filter values.
+         */
+        function applyFilters() {
+            const searchTerm = searchInput.value.toLowerCase();
+            const selectedBuilding = buildingFilter.value;
+            const selectedRlt = rltFilter.value;
+
+            let filteredData = tableData.filter(row => {
+                const matchesBuilding = !selectedBuilding || row['Gebäude'] === selectedBuilding;
+                // *** UPDATED *** Using 'RLT-Anlagen' to match the user's Excel file
+                const matchesRlt = !selectedRlt || row['RLT-Anlagen'] === selectedRlt;
+                
+                // Check if search term matches any value in the row
+                const matchesSearch = !searchTerm || Object.values(row).some(value =>
+                    String(value).toLowerCase().includes(searchTerm)
+                );
+
+                return matchesBuilding && matchesRlt && matchesSearch;
+            });
+
+            renderTable(filteredData);
+        }
+
+        // Event listeners for filter controls
+        searchInput.addEventListener('input', applyFilters);
+        buildingFilter.addEventListener('change', applyFilters);
+        rltFilter.addEventListener('change', applyFilters);
+
+        /**
+         * Handles the print button click.
+         * Opens the browser's print dialog.
+         */
+        printButton.addEventListener('click', () => {
+            // Set a title for the printed document
+            const building = buildingFilter.options[buildingFilter.selectedIndex].text;
+            const rlt = rltFilter.options[rltFilter.selectedIndex].text;
+            printTitle.textContent = `Filterliste für: ${building} / ${rlt}`;
+            printTitle.classList.remove('hidden');
+
+            window.print();
+
+            // Hide the title again after printing
+            printTitle.classList.add('hidden');
         });
 
-        // Event-Listener für den Drucken-Button
-        printBtn.addEventListener('click', () => {
-            window.print();
-        });
     </script>
 </body>
 </html>
