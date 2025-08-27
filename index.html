@@ -91,6 +91,10 @@
         }
         .saving-positive { color: #16a34a; }
         .saving-negative { color: #dc2626; }
+        /* Custom grid for scheduler */
+        .grid-cols-25 {
+            grid-template-columns: repeat(25, minmax(0, 1fr));
+        }
     </style>
 </head>
 <body class="p-4 sm:p-6 md:p-8">
@@ -199,6 +203,23 @@
         </main>
     </div>
 
+    <!-- Modal for notifications -->
+    <div id="alert-modal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full flex items-center justify-center hidden z-50">
+        <div class="relative mx-auto p-5 border w-full max-w-md shadow-lg rounded-md bg-white">
+            <div class="mt-3 text-center">
+                <h3 class="text-lg leading-6 font-medium text-gray-900">Hinweis</h3>
+                <div class="mt-2 px-7 py-3">
+                    <p id="modal-message" class="text-sm text-gray-600"></p>
+                </div>
+                <div class="items-center px-4 py-3">
+                    <button id="modal-close-btn" class="px-4 py-2 bg-blue-600 text-white text-base font-medium rounded-md w-full shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-400">
+                        Schließen
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
 <script>
 // --- KONSTANTEN UND GLOBALE VARIABLEN ---
 const R_d = 287.058; // Gaskonstante für trockene Luft [J/(kg*K)]
@@ -264,7 +285,17 @@ document.addEventListener('DOMContentLoaded', () => {
     addInputValidation();
     
     document.getElementById('calculate-btn').addEventListener('click', runAnalysis);
+
+    // Modal logic
+    document.getElementById('modal-close-btn').addEventListener('click', () => {
+        document.getElementById('alert-modal').classList.add('hidden');
+    });
 });
+
+function showModal(message) {
+    document.getElementById('modal-message').textContent = message;
+    document.getElementById('alert-modal').classList.remove('hidden');
+}
 
 function switchTab(tabName) {
     activeTab = tabName;
@@ -431,7 +462,7 @@ function runAnalysis() {
     const optimierungData = calculateScenario('optimierung');
 
     if (!basisData || !optimierungData) {
-        alert("Bitte überprüfen Sie Ihre Eingaben. Eine Berechnung war nicht möglich.");
+        showModal("Bitte überprüfen Sie Ihre Eingaben. Eine Berechnung war nicht möglich.");
         return;
     }
     
