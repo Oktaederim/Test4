@@ -1,710 +1,691 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="de">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Experten-Tool für RLT-Analyse</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <style>
-        body {
-            font-family: 'Inter', sans-serif;
-            background-color: #f0f2f5;
-        }
-        .card {
-            background-color: white;
-            border-radius: 0.75rem;
-            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
-            padding: 1.5rem;
-            margin-bottom: 1.5rem;
-        }
-        .input-group {
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-        .input-field {
-            width: 100%;
-            padding: 0.5rem 0.75rem;
-            border: 1px solid #d1d5db;
-            border-radius: 0.375rem;
-            transition: border-color 0.2s, box-shadow 0.2s;
-        }
-        .input-field:focus {
-            outline: none;
-            border-color: #3b82f6;
-            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.3);
-        }
-        .unit-label {
-            white-space: nowrap;
-            color: #4b5563;
-        }
-        .tab {
-            padding: 0.75rem 1.5rem;
-            cursor: pointer;
-            border-bottom: 2px solid transparent;
-            font-weight: 500;
-            color: #4b5563;
-            transition: all 0.2s;
-        }
-        .tab.active {
-            color: #1d4ed8;
-            border-bottom-color: #1d4ed8;
-        }
-        .scheduler-cell {
-            width: 100%;
-            padding-top: 100%; /* Aspect ratio 1:1 */
-            position: relative;
-            cursor: pointer;
-            border: 1px solid #e5e7eb;
-            transition: background-color 0.2s;
-        }
-        .scheduler-cell:hover {
-            border-color: #9ca3af;
-        }
-        .cell-content {
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-        }
-        .mode-normal { background-color: #3b82f6; }
-        .mode-absenk { background-color: #a5b4fc; }
-        .mode-aus { background-color: #e5e7eb; }
-        .kpi-card {
-            background-color: white;
-            border-radius: 0.75rem;
-            padding: 1.5rem;
-            text-align: center;
-            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
-        }
-        .kpi-value {
-            font-size: 2.25rem;
-            font-weight: 700;
-            color: #111827;
-        }
-        .kpi-label {
-            font-size: 1rem;
-            color: #4b5563;
-        }
-        .saving-positive { color: #16a34a; }
-        .saving-negative { color: #dc2626; }
-        /* Custom grid for scheduler */
-        .grid-cols-25 {
-            grid-template-columns: repeat(25, minmax(0, 1fr));
-        }
-    </style>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>RLT – Energie- & Kostenrechner (Szenarienvergleich)</title>
+<!-- Chart.js für Diagramme -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<style>
+  :root{
+    --bg:#0f172a; --panel:#111827; --panel2:#0b1222; --muted:#94a3b8; --text:#e5e7eb;
+    --accent:#22c55e; --warn:#f59e0b; --danger:#ef4444; --grid0:#1f2937; --grid1:#f59e0b; --grid2:#22c55e;
+  }
+  *{box-sizing:border-box}
+  body{margin:0; font-family:Inter,system-ui,Segoe UI,Arial; background:linear-gradient(180deg,#0b1120,#111827); color:var(--text)}
+  h1,h2,h3{margin:0.2rem 0 0.6rem}
+  h1{font-size:1.4rem}
+  h2{font-size:1.1rem; color:#cbd5e1}
+  h3{font-size:1rem; color:#cbd5e1}
+  small{color:var(--muted)}
+  .wrap{max-width:1300px; margin:1rem auto; padding:0 1rem}
+  .grid{display:grid; gap:12px}
+  .cols-3{grid-template-columns: 1fr 1fr 1fr}
+  .cols-2{grid-template-columns: 1fr 1fr}
+  .panel{background:linear-gradient(180deg,var(--panel),var(--panel2)); border:1px solid #1f2937; border-radius:12px; padding:12px}
+  .flex{display:flex; gap:10px; align-items:center; flex-wrap:wrap}
+  .row{display:flex; gap:8px; margin:6px 0; flex-wrap:wrap}
+  label{display:flex; flex-direction:column; gap:3px; font-size:0.9rem; min-width:160px}
+  input, select{background:#0b1222; color:var(--text); border:1px solid #243042; border-radius:8px; padding:8px 10px; outline:none; font-size:0.95rem}
+  input[type=number]{width:160px}
+  input:invalid{border-color:var(--danger)}
+  .field-inline{display:flex; gap:6px; align-items:center}
+  .unit{font-size:0.85rem; color:var(--muted)}
+  .btn{background:#0b1222; border:1px solid #263142; color:#e5e7eb; padding:8px 12px; border-radius:10px; cursor:pointer}
+  .btn:hover{border-color:#3b4a61}
+  .btn-accent{background:#052e1a; border-color:#14532d}
+  .kpi{display:grid; grid-template-columns: repeat(4,1fr); gap:10px}
+  .kpi .card{background:#0b1222; border:1px solid #1f2937; border-radius:12px; padding:12px}
+  .card h3{font-weight:600; font-size:0.95rem}
+  .card .val{font-size:1.2rem; margin-top:4px}
+  .ok{color:var(--accent)} .warn{color:var(--warn)} .bad{color:var(--danger)}
+  /* Wochenplaner */
+  .planner{display:grid; grid-template-columns: 80px repeat(7, 1fr); gap:6px}
+  .planner .daycol{display:grid; grid-template-rows: repeat(48, 12px); gap:2px}
+  .cell{border-radius:3px; background:var(--grid0); cursor:crosshair}
+  .cell[data-state="0"]{background:var(--grid0)}
+  .cell[data-state="1"]{background:var(--grid1)}
+  .cell[data-state="2"]{background:var(--grid2)}
+  .legend{display:flex; gap:10px; align-items:center; flex-wrap:wrap}
+  .swatch{width:14px; height:14px; border-radius:3px; display:inline-block}
+  table{width:100%; border-collapse:collapse; margin-top:6px}
+  th,td{border-bottom:1px solid #1f2937; padding:8px 6px; text-align:right}
+  th:first-child, td:first-child{text-align:left}
+  .footnote{color:var(--muted); font-size:0.85rem}
+  .hl{color:#cbd5e1}
+  .two{display:grid; grid-template-columns: 1fr 1fr; gap:12px}
+  .danger-text{color:var(--danger)}
+  .muted{color:var(--muted)}
+  @media (max-width:1000px){ .kpi{grid-template-columns:1fr 1fr} .cols-3{grid-template-columns:1fr} .cols-2{grid-template-columns:1fr} .two{grid-template-columns:1fr}}
+</style>
 </head>
-<body class="p-4 sm:p-6 md:p-8">
-    <div class="max-w-7xl mx-auto">
-        <header class="mb-8 text-center">
-            <h1 class="text-4xl font-bold text-gray-800">Experten-Tool für RLT-Analyse</h1>
-            <p class="text-lg text-gray-600 mt-2">Detaillierte Energie- und Kostenanalyse inkl. Feuchteberechnung</p>
-        </header>
+<body>
+<div class="wrap">
+  <h1>RLT – Energie- & Kostenrechner (Enthalpie-basiert) • Szenarienvergleich</h1>
+  <small>Bereiche: Eingaben • Übersicht (Dashboard) • Detailbericht. Alle Berechnungen auf Basis der spezifischen Enthalpie (kJ/kg).</small>
 
-        <main id="app">
-            <!-- EINGABEBEREICH -->
-            <div class="card">
-                <h2 class="text-2xl font-semibold text-gray-700 border-b pb-3 mb-6">1. Eingabeparameter</h2>
-                
-                <div class="mb-6">
-                    <label for="anlagenmodus" class="block text-md font-medium text-gray-700 mb-2">Anlagenmodus</label>
-                    <select id="anlagenmodus" class="input-field w-full md:w-1/3">
-                        <option value="temp">Nur Temperaturführung (Heizen/Kühlen)</option>
-                        <option value="dehumidify">Kühlen und Entfeuchten</option>
-                        <option value="humidify">Heizen und Befeuchten</option>
-                    </select>
-                </div>
-
-                <!-- TABS FÜR SZENARIEN -->
-                <div class="flex border-b mb-6">
-                    <div id="tab-basis" class="tab active" onclick="switchTab('basis')">Basis-Szenario (Ist)</div>
-                    <div id="tab-optimierung" class="tab" onclick="switchTab('optimierung')">Optimierungs-Szenario (Soll)</div>
-                </div>
-
-                <!-- FORMULARE -->
-                <div id="form-container">
-                    <!-- Platzhalter für die beiden Formulare, die per JS eingefügt werden -->
-                </div>
-            </div>
-
-            <!-- BERECHNUNGSBUTTON -->
-            <div class="flex justify-center my-8">
-                <button id="calculate-btn" class="bg-blue-600 text-white font-bold py-3 px-12 rounded-lg hover:bg-blue-700 transition-transform transform hover:scale-105 shadow-lg">
-                    Analyse durchführen
-                </button>
-            </div>
-
-            <!-- ERGEBNISBEREICH -->
-            <div id="results-container" class="hidden">
-                <!-- ÜBERSICHT / DASHBOARD -->
-                <div class="card">
-                    <h2 class="text-2xl font-semibold text-gray-700 border-b pb-3 mb-6">2. Übersicht (Dashboard)</h2>
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                        <div class="kpi-card">
-                            <h3 class="kpi-label">Gesamtkosten Basis</h3>
-                            <p id="kpi-cost-basis" class="kpi-value">0 €/a</p>
-                        </div>
-                        <div class="kpi-card">
-                            <h3 class="kpi-label">Gesamtkosten Optimierung</h3>
-                            <p id="kpi-cost-optimierung" class="kpi-value">0 €/a</p>
-                        </div>
-                        <div class="kpi-card">
-                            <h3 class="kpi-label">Einsparung</h3>
-                            <p id="kpi-saving" class="kpi-value saving-positive">0 €/a</p>
-                            <p id="kpi-saving-percent" class="text-lg font-medium saving-positive">(0 %)</p>
-                        </div>
-                    </div>
-                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                        <div>
-                            <h3 class="text-lg font-medium text-gray-700 text-center mb-4">Kostenverteilung (Optimierung)</h3>
-                            <canvas id="cost-distribution-chart"></canvas>
-                        </div>
-                        <div>
-                            <h3 class="text-lg font-medium text-gray-700 text-center mb-4">Szenarienvergleich Jahreskosten</h3>
-                            <canvas id="scenario-comparison-chart"></canvas>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- DETAILBERICHT -->
-                <div class="card">
-                    <h2 class="text-2xl font-semibold text-gray-700 border-b pb-3 mb-6">3. Detailbericht</h2>
-                    <div class="overflow-x-auto">
-                        <table class="min-w-full divide-y divide-gray-200">
-                            <thead class="bg-gray-50">
-                                <tr>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Parameter</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Einheit</th>
-                                    <th colspan="2" class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider border-l border-r">Basis-Szenario</th>
-                                    <th colspan="2" class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider border-l border-r">Optimierungs-Szenario</th>
-                                    <th colspan="2" class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider border-l">Einsparung</th>
-                                </tr>
-                                <tr>
-                                    <th></th>
-                                    <th></th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-l">Energie [kWh/a]</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Kosten [€/a]</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-l">Energie [kWh/a]</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Kosten [€/a]</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-l">Energie [kWh/a]</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Kosten [€/a]</th>
-                                </tr>
-                            </thead>
-                            <tbody id="report-table-body" class="bg-white divide-y divide-gray-200">
-                                <!-- Rows will be inserted by JS -->
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-        </main>
-    </div>
-
-    <!-- Modal for notifications -->
-    <div id="alert-modal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full flex items-center justify-center hidden z-50">
-        <div class="relative mx-auto p-5 border w-full max-w-md shadow-lg rounded-md bg-white">
-            <div class="mt-3 text-center">
-                <h3 class="text-lg leading-6 font-medium text-gray-900">Hinweis</h3>
-                <div class="mt-2 px-7 py-3">
-                    <p id="modal-message" class="text-sm text-gray-600"></p>
-                </div>
-                <div class="items-center px-4 py-3">
-                    <button id="modal-close-btn" class="px-4 py-2 bg-blue-600 text-white text-base font-medium rounded-md w-full shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-400">
-                        Schließen
-                    </button>
-                </div>
-            </div>
+  <!-- Eingaben -->
+  <div class="grid cols-3" style="margin-top:12px">
+    <!-- Betriebsprofil & Kosten -->
+    <div class="panel">
+      <h2>1) Betriebsprofil & Energiekosten</h2>
+      <div style="margin-top:6px">
+        <div class="legend">
+          <div class="swatch" style="background:var(--grid2)"></div><span>Normalbetrieb</span>
+          <div class="swatch" style="background:var(--grid1)"></div><span>Absenkbetrieb</span>
+          <div class="swatch" style="background:var(--grid0)"></div><span>Anlage AUS</span>
         </div>
+        <div class="row">
+          <label>Malmodus
+            <select id="paintMode">
+              <option value="2">Normalbetrieb „grün“</option>
+              <option value="1">Absenkbetrieb „orange“</option>
+              <option value="0">Anlage AUS „dunkel“</option>
+            </select>
+          </label>
+          <button class="btn" id="btnFillNB">Woche: Werktage 8–18 Uhr = Normalbetrieb</button>
+          <button class="btn" id="btnClear">Alles AUS</button>
+        </div>
+        <div class="planner" id="planner"></div>
+        <div class="row">
+          <label>Zusatzstunden NB pro Jahr
+            <input type="number" id="extraNB" min="0" step="0.5" value="0">
+          </label>
+          <label>Zusatzstunden AB pro Jahr
+            <input type="number" id="extraAB" min="0" step="0.5" value="0">
+          </label>
+          <label>Heizstunden pro Jahr
+            <input type="number" id="hHeat" min="0" step="1" value="2000">
+          </label>
+          <label>Kühlstunden pro Jahr
+            <input type="number" id="hCool" min="0" step="1" value="800">
+          </label>
+        </div>
+        <div class="row">
+          <label>Wärmekosten [€/kWh]
+            <input type="number" id="cHeat" min="0" step="0.001" value="0.08">
+          </label>
+          <label>Kältekosten [€/kWh] <small class="muted">(direkte Verrechnung oder via EER unten)</small>
+            <input type="number" id="cCold" min="0" step="0.001" value="0.14">
+          </label>
+          <label>Stromkosten [€/kWh]
+            <input type="number" id="cEl" min="0" step="0.001" value="0.25">
+          </label>
+        </div>
+        <div class="row">
+          <label>Alternative: Kältemaschine EER <small class="muted">(optional)</small>
+            <input type="number" id="eer" min="0" step="0.1" value="">
+          </label>
+          <div class="footnote">Wenn EER &gt; 0 gesetzt ist, werden **Kältekosten** = (Kälte-Energie / EER) · Strompreis berechnet – der Wert in „Kältekosten €/kWh“ wird ignoriert.</div>
+        </div>
+      </div>
     </div>
+
+    <!-- Szenario Basis -->
+    <div class="panel">
+      <h2>2) Basis-Szenario (Ist)</h2>
+      <ScenarioForm id="base"></ScenarioForm>
+    </div>
+
+    <!-- Szenario Optimierung -->
+    <div class="panel">
+      <h2>3) Optimierungs-Szenario (Soll)</h2>
+      <ScenarioForm id="opt"></ScenarioForm>
+    </div>
+  </div>
+
+  <!-- Übersicht / Dashboard -->
+  <div class="panel" style="margin-top:12px">
+    <h2>Übersicht (Dashboard)</h2>
+    <div class="kpi" id="kpis">
+      <div class="card"><h3>Kosten Basis (€/a)</h3><div class="val" id="kBase">–</div></div>
+      <div class="card"><h3>Kosten Optimierung (€/a)</h3><div class="val" id="kOpt">–</div></div>
+      <div class="card"><h3>Einsparung absolut (€/a)</h3><div class="val ok" id="kSaveAbs">–</div></div>
+      <div class="card"><h3>Einsparung relativ (%)</h3><div class="val ok" id="kSaveRel">–</div></div>
+    </div>
+    <div class="two" style="margin-top:10px">
+      <div><canvas id="pieBase" height="160"></canvas></div>
+      <div><canvas id="pieOpt" height="160"></canvas></div>
+    </div>
+    <div style="margin-top:10px"><canvas id="barCompare" height="180"></canvas></div>
+    <div id="hints" style="margin-top:8px"></div>
+  </div>
+
+  <!-- Detailbericht -->
+  <div class="panel" style="margin-top:12px">
+    <h2>Detailbericht</h2>
+    <div id="report"></div>
+    <div class="footnote">Hinweis: Leistungen auf Enthalpiedifferenzen (kJ/kg) basierend; Massenströme aus Volumenstrom·Dichte. WRG standardmäßig ohne Stoffübertrag (x), optional mit Feuchteübertragung η<sub>x</sub>.</div>
+  </div>
+</div>
 
 <script>
-// --- KONSTANTEN UND GLOBALE VARIABLEN ---
-const R_d = 287.058; // Gaskonstante für trockene Luft [J/(kg*K)]
-const R_w = 461.52; // Gaskonstante für Wasserdampf [J/(kg*K)]
-const cp_d = 1.006; // Spezifische Wärmekapazität trockener Luft [kJ/(kg*K)]
-const cp_w = 1.86; // Spezifische Wärmekapazität Wasserdampf [kJ/(kg*K)]
-const h_v0 = 2501; // Verdampfungsenthalpie von Wasser bei 0°C [kJ/kg]
-let costDistributionChart, scenarioComparisonChart;
-let activeTab = 'basis';
+/* =========================
+   Hilfen: Parsing & Validierung
+   ========================= */
+function num(v, def=0){
+  if (v===undefined || v===null) return def;
+  if (typeof v === "number") return v;
+  const t = String(v).replace(",", ".").trim();
+  const n = parseFloat(t);
+  return Number.isFinite(n) ? n : def;
+}
+function clamp(v, min, max){ return Math.min(max, Math.max(min, v)); }
+function pctToDec(p){ return num(p)/100; }
+function decToPct(d){ return d*100; }
 
-// --- PSYCHROMETRIE-BIBLIOTHEK ---
-const psychroLib = {
-    // Sättigungsdampfdruck [Pa] nach Magnus-Formel
-    getSaturationVaporPressure(tempC) {
-        return 611.2 * Math.exp((17.62 * tempC) / (243.12 + tempC));
-    },
+/* =========================
+   Psychrometrie (kJ/kg, kg/kg)
+   ========================= */
+const P_STD = 101325; // Pa
+function psat_Pa(T_C){
+  // Tetens (Magnus) – solide für HLK (−40 … +60 °C)
+  const a=17.625, b=243.04;
+  const pws_kPa = 0.61094 * Math.exp((a*T_C)/(T_C+b));
+  return pws_kPa * 1000; // Pa
+}
+function x_from_T_RH(T_C, RH_percent, pPa=P_STD){
+  const pws = psat_Pa(T_C);
+  const pw  = Math.min((num(RH_percent)/100)*pws, 0.999*pPa);
+  return 0.62198 * pw / (pPa - pw); // kg/kg
+}
+function RH_from_T_x(T_C, x, pPa=P_STD){
+  const pws = psat_Pa(T_C);
+  const pw = (x * pPa) / (0.62198 + x);
+  return clamp(100 * pw / pws, 0, 100);
+}
+function x_from_gpkg(gpkg){ return num(gpkg)/1000; }
+function gpkg_from_x(x){ return x*1000; }
+function h_kJ_per_kg(T_C, x){
+  return 1.006*T_C + x*(2501 + 1.86*T_C);
+}
+function rho_moist_air(T_C, x, pPa=P_STD){
+  const T_K = T_C + 273.15;
+  const R_da = 287.058;
+  return pPa / (R_da * T_K * (1 + 1.6078*x));
+}
+function normalizeState(T_C, humVal, humMode, pPa=P_STD){
+  const x = (humMode === "%rF") ? x_from_T_RH(T_C, humVal, pPa) : x_from_gpkg(humVal);
+  const h = h_kJ_per_kg(T_C, x);
+  const RH = RH_from_T_x(T_C, x, pPa);
+  const gpkg = gpkg_from_x(x);
+  return { T_C, x, h, RH, gpkg };
+}
 
-    // Absolute Feuchte [g/kg] aus Temperatur [°C] und relativer Feuchte [%]
-    getAbsoluteHumidity(tempC, relHum, pressurePa = 101325) {
-        if (relHum < 0) relHum = 0;
-        const p_sat = this.getSaturationVaporPressure(tempC);
-        const p_w = (relHum / 100) * p_sat;
-        const x = 0.622 * (p_w / (pressurePa - p_w));
-        return x * 1000; // in g/kg
-    },
+/* =========================
+   WRG – Temperatur / optional x-Übertrag
+   ========================= */
+function afterWRG_T(T_out, T_exh, etaWRG, mode){ // mode: "heating"|"cooling"
+  return (mode==="heating")
+    ? (T_out + etaWRG * (T_exh - T_out))
+    : (T_out - etaWRG * (T_out - T_exh));
+}
+function afterWRG_x(x_out, x_exh, etaX){ // etaX=0 … 1
+  return x_out + etaX * (x_exh - x_out);
+}
 
-    // Relative Feuchte [%] aus Temperatur [°C] und absoluter Feuchte [g/kg]
-    getRelativeHumidity(tempC, absHum_g_kg, pressurePa = 101325) {
-        const absHum = absHum_g_kg / 1000; // in kg/kg
-        const p_sat = this.getSaturationVaporPressure(tempC);
-        const p_w = (absHum * pressurePa) / (0.622 + absHum);
-        return (p_w / p_sat) * 100;
-    },
+/* =========================
+   Wochenplaner (30-Minuten Raster)
+   state: 0=Aus, 1=Absenk, 2=Normal
+   ========================= */
+const plannerEl = document.getElementById("planner");
+const paintSel = document.getElementById("paintMode");
+let painting = false, paintValue = 2;
+paintSel.addEventListener("change", ()=> paintValue = Number(paintSel.value));
 
-    // Enthalpie [kJ/kg] aus Temperatur [°C] und absoluter Feuchte [g/kg]
-    getEnthalpyFromAbsHum(tempC, absHum_g_kg) {
-        const absHum = absHum_g_kg / 1000; // in kg/kg
-        return cp_d * tempC + absHum * (h_v0 + cp_w * tempC);
-    },
+const DAYS = ["Mo","Di","Mi","Do","Fr","Sa","So"];
+const plannerState = Array.from({length:7}, _=> Array(48).fill(0)); // Woche
 
-    // Enthalpie [kJ/kg] aus Temperatur [°C] und relativer Feuchte [%]
-    getEnthalpyFromRelHum(tempC, relHum) {
-        const absHum_g_kg = this.getAbsoluteHumidity(tempC, relHum);
-        return this.getEnthalpyFromAbsHum(tempC, absHum_g_kg);
-    },
-    
-    // Dichte [kg/m³]
-    getDensity(tempC, absHum_g_kg, pressurePa = 101325) {
-        const tempK = tempC + 273.15;
-        const absHum = absHum_g_kg / 1000;
-        const p_d = pressurePa / (1 + 0.622 * (absHum / (1-absHum))); // Partialdruck trockene Luft
-        const p_w = pressurePa - p_d; // Partialdruck Wasserdampf
-        return (p_d / (R_d * tempK)) + (p_w / (R_w * tempK));
+function buildPlanner(){
+  plannerEl.innerHTML = "";
+  // linke Spalte: Uhrzeiten
+  const timesCol = document.createElement("div");
+  timesCol.style.display="grid"; timesCol.style.gridTemplateRows="repeat(48,12px)";
+  timesCol.style.gap="2px"; timesCol.style.justifyItems="end";
+  for(let i=0;i<48;i++){
+    const t = document.createElement("div"); t.style.fontSize="10px"; t.style.color="#9aa4b2";
+    if(i%2===0){ t.textContent = String(i/2).padStart(2,"0")+":00"; } else { t.textContent=""; }
+    timesCol.appendChild(t);
+  }
+  plannerEl.appendChild(timesCol);
+  // 7 Tages-Spalten
+  for(let d=0; d<7; d++){
+    const col = document.createElement("div"); col.className="daycol";
+    const head = document.createElement("div");
+    head.style.gridRow="1"; head.style.marginBottom="2px"; head.style.position="sticky";
+    head.style.top="0"; // (optisch)
+    col.dataset.day = d;
+    for(let s=0;s<48;s++){
+      const cell = document.createElement("div");
+      cell.className="cell"; cell.dataset.state = plannerState[d][s];
+      cell.dataset.d = d; cell.dataset.s = s;
+      cell.addEventListener("mousedown", (e)=>{ painting=true; setCell(d,s,paintValue); e.preventDefault();});
+      cell.addEventListener("mouseover", ()=>{ if(painting) setCell(d,s,paintValue); });
+      col.appendChild(cell);
     }
-};
+    plannerEl.appendChild(col);
+  }
+}
+function setCell(d,s,val){
+  plannerState[d][s] = val;
+  const sel = `.daycol:nth-child(${d+2}) .cell:nth-child(${s+1})`; // +2 wegen Zeitspalte
+  const ce = plannerEl.querySelector(sel);
+  if(ce) ce.dataset.state = val;
+  scheduleChanged();
+}
+document.addEventListener("mouseup", ()=> painting=false);
 
-// --- UI-LOGIK ---
-document.addEventListener('DOMContentLoaded', () => {
-    const formContainer = document.getElementById('form-container');
-    formContainer.innerHTML = createFormHTML('basis') + createFormHTML('optimierung');
-    document.getElementById('form-optimierung').style.display = 'none';
-
-    addInputValidation();
-    
-    document.getElementById('calculate-btn').addEventListener('click', runAnalysis);
-
-    // Modal logic
-    document.getElementById('modal-close-btn').addEventListener('click', () => {
-        document.getElementById('alert-modal').classList.add('hidden');
-    });
+document.getElementById("btnFillNB").addEventListener("click", ()=>{
+  for(let d=0; d<5; d++){ // Mo–Fr 8–18 NB, Rest AUS
+    for(let s=0;s<48;s++){
+      const hour = s/2;
+      plannerState[d][s] = (hour>=8 && hour<18) ? 2 : 0;
+    }
+  }
+  for(let d=5; d<7; d++){
+    for(let s=0;s<48;s++){ plannerState[d][s]=0; }
+  }
+  buildPlanner(); scheduleChanged();
 });
+document.getElementById("btnClear").addEventListener("click", ()=>{
+  for(let d=0; d<7; d++) for(let s=0; s<48; s++) plannerState[d][s]=0;
+  buildPlanner(); scheduleChanged();
+});
+buildPlanner();
 
-function showModal(message) {
-    document.getElementById('modal-message').textContent = message;
-    document.getElementById('alert-modal').classList.remove('hidden');
+function weeklyHours(){
+  let nb=0, ab=0, off=0;
+  for(let d=0; d<7; d++){
+    for(let s=0; s<48; s++){
+      if(plannerState[d][s]===2) nb += 0.5;
+      else if(plannerState[d][s]===1) ab += 0.5;
+      else off += 0.5;
+    }
+  }
+  return {nb, ab, off};
+}
+function annualHours(){
+  const w = weeklyHours();
+  const extraNB = num(document.getElementById("extraNB").value,0);
+  const extraAB = num(document.getElementById("extraAB").value,0);
+  return {
+    NB_h_per_a: w.nb*52 + extraNB,
+    AB_h_per_a: w.ab*52 + extraAB,
+    OFF_h_per_a: w.off*52
+  };
 }
 
-function switchTab(tabName) {
-    activeTab = tabName;
-    document.getElementById('tab-basis').classList.toggle('active', tabName === 'basis');
-    document.getElementById('tab-optimierung').classList.toggle('active', tabName === 'optimierung');
-    document.getElementById('form-basis').style.display = tabName === 'basis' ? 'block' : 'none';
-    document.getElementById('form-optimierung').style.display = tabName === 'optimierung' ? 'block' : 'none';
-}
-
-// --- HTML-GENERIERUNG ---
-function createFormHTML(prefix) {
-    const title = prefix === 'basis' ? 'Basis-Szenario' : 'Optimierungs-Szenario';
+/* =========================
+   Szenario-Formular (Web Component)
+   ========================= */
+class ScenarioForm extends HTMLElement{
+  connectedCallback(){
+    const id=this.getAttribute("id")||"scn";
+    this.innerHTML = this.template(id);
+    this.bind(id);
+  }
+  template(id){
     return `
-        <form id="form-${prefix}" data-prefix="${prefix}">
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-6">
-                <!-- Allgemeine Anlagenparameter -->
-                <div class="lg:col-span-3">
-                    <h3 class="text-lg font-semibold text-gray-600 border-b pb-2 mb-4">Allgemeine Anlagenparameter</h3>
-                </div>
-                ${createInputField(prefix, 'volumenstromNormal', 'Zuluftvolumenstrom Normalbetrieb', 20000, 'm³/h')}
-                ${createInputField(prefix, 'volumenstromAbsenk', 'Zuluftvolumenstrom Absenkbetrieb', 10000, 'm³/h')}
-                ${createInputField(prefix, 'druckverlust', 'Gesamtdruckverlust Anlage', 1500, 'Pa')}
-                ${createInputField(prefix, 'wirkungsgradVentilator', 'Wirkungsgrad Ventilator', 70, '%', {min: 0, max: 100})}
-                ${createInputField(prefix, 'wirkungsgradMotor', 'Wirkungsgrad Motor', 90, '%', {min: 0, max: 100})}
-                ${createInputField(prefix, 'wirkungsgradWRG', 'Wirkungsgrad WRG', 75, '%', {min: 0, max: 100})}
+    <div class="row">
+      <label>Anlagenmodus
+        <select id="${id}_mode">
+          <option value="temp_only">Nur Temperaturführung (Heizen/Kühlen)</option>
+          <option value="cool_dehum">Kühlen und Entfeuchten</option>
+          <option value="heat_humid">Heizen und Befeuchten</option>
+        </select>
+      </label>
+      <label>WRG-Wirkungsgrad η<sub>WRG</sub> [%]
+        <input type="number" id="${id}_etaWRG" min="0" max="100" step="0.5" value="70">
+      </label>
+      <label>WRG-Feuchteübertrag η<sub>x</sub> [%] <small class="muted">(optional, z. B. Rotor)</small>
+        <input type="number" id="${id}_etaX" min="0" max="100" step="1" value="0">
+      </label>
+      <label>Dichte
+        <select id="${id}_rhoMode">
+          <option value="fixed">fix 1,2 kg/m³</option>
+          <option value="calc">berechnet (genauer)</option>
+        </select>
+      </label>
+    </div>
+    <div class="row">
+      <label>Zuluftvolumenstrom Normalbetrieb [m³/h]
+        <input type="number" id="${id}_V_NB" min="0" max="500000" step="100" value="30000" required>
+      </label>
+      <label>Zuluftvolumenstrom Absenkbetrieb [m³/h]
+        <input type="number" id="${id}_V_AB" min="0" max="500000" step="100" value="15000" required>
+      </label>
+      <label>Gesamtdruckverlust Δp [Pa]
+        <input type="number" id="${id}_dp" min="0" max="4000" step="10" value="800" required>
+      </label>
+      <label>η Ventilator [%]
+        <input type="number" id="${id}_etaFan" min="0" max="100" step="0.5" value="65" required>
+      </label>
+      <label>η Motor [%]
+        <input type="number" id="${id}_etaMot" min="0" max="100" step="0.5" value="95" required>
+      </label>
+    </div>
 
-                <!-- Betriebs- und Klimazustände -->
-                <div class="lg:col-span-3 mt-4">
-                    <h3 class="text-lg font-semibold text-gray-600 border-b pb-2 mb-4">Betriebs- und Klimazustände</h3>
-                </div>
-                ${createStatePointField(prefix, 'aussenluftHeiz', 'Zustand Außenluft (Heizperiode)', -5, 80)}
-                ${createStatePointField(prefix, 'aussenluftKuehl', 'Zustand Außenluft (Kühlperiode)', 32, 50)}
-                ${createStatePointField(prefix, 'abluft', 'Soll-Zustand Raumluft/Abluft', 21, 50)}
-                ${createStatePointField(prefix, 'zuluftNormal', 'Soll-Zustand Zuluft (Normal)', 21, 50)}
-                ${createStatePointField(prefix, 'zuluftAbsenk', 'Soll-Zustand Zuluft (Absenk)', 18, 50)}
-                ${createInputField(prefix, 'heizstunden', 'Heizstunden pro Jahr', 3000, 'h/a')}
-                ${createInputField(prefix, 'kuehlstunden', 'Kühlstunden pro Jahr', 1000, 'h/a')}
-
-                <!-- Energiekosten -->
-                <div class="lg:col-span-3 mt-4">
-                    <h3 class="text-lg font-semibold text-gray-600 border-b pb-2 mb-4">Energiekosten</h3>
-                </div>
-                ${createInputField(prefix, 'kostenWaerme', 'Kosten Wärmeenergie', 0.12, '€/kWh', {step: 0.001})}
-                ${createInputField(prefix, 'kostenKaelte', 'Kosten Kälteenergie', 0.08, '€/kWh', {step: 0.001})}
-                ${createInputField(prefix, 'kostenStrom', 'Kosten elektrische Energie', 0.30, '€/kWh', {step: 0.001})}
-            </div>
-            
-            <!-- Betriebszeiten-Planer -->
-            <div class="mt-8">
-                <h3 class="text-lg font-semibold text-gray-600 border-b pb-2 mb-4">Betriebsprofil (Wochenplaner)</h3>
-                ${createScheduler(prefix)}
-            </div>
-        </form>
+    <h3>Klimazustände</h3>
+    <div class="row">
+      ${this.statePoint(id,"OUT_H","Außenluft (Heizperiode)", -5, 80, "%rF")}
+      ${this.statePoint(id,"OUT_C","Außenluft (Kühlperiode)", 30, 50, "%rF")}
+    </div>
+    <div class="row">
+      ${this.statePoint(id,"ROOM","Raum/Abluft Soll", 22, 50, "%rF")}
+    </div>
+    <div class="row">
+      ${this.statePoint(id,"SUP_NB","Zuluft Soll (Normalbetrieb)", 20, 45, "%rF")}
+      ${this.statePoint(id,"SUP_AB","Zuluft Soll (Absenkbetrieb)", 17, 50, "%rF")}
+    </div>
     `;
-}
-
-function createInputField(prefix, id, label, value, unit, options = {}) {
-    const { min, max, step } = { min: 0, max: 100000, step: 1, ...options };
+  }
+  statePoint(id,key,label,t0=20,hum0=50,mode0="%rF"){
+    const uid = `${id}_${key}`;
     return `
-        <div>
-            <label for="${prefix}-${id}" class="block text-sm font-medium text-gray-700">${label}</label>
-            <div class="input-group mt-1">
-                <input type="number" id="${prefix}-${id}" value="${value}" min="${min}" max="${max}" step="${step}" class="input-field">
-                <span class="unit-label">${unit}</span>
-            </div>
-        </div>
+    <fieldset style="border:1px solid #1f2937; border-radius:10px; padding:8px; min-width:280px">
+      <legend class="muted">${label}</legend>
+      <div class="row">
+        <label>Temperatur [°C]
+          <input type="number" id="${uid}_T" min="-40" max="60" step="0.5" value="${t0}">
+        </label>
+        <label>Feuchte
+          <div class="field-inline">
+            <input type="number" id="${uid}_H" step="0.1" value="${hum0}">
+            <select id="${uid}_Hmode">
+              <option value="%rF" ${mode0==="%rF"?"selected":""}>% r.F.</option>
+              <option value="g_per_kg" ${mode0==="g_per_kg"?"selected":""}>g/kg</option>
+            </select>
+          </div>
+        </label>
+      </div>
+      <div class="footnote" id="${uid}_info">–</div>
+    </fieldset>
     `;
+  }
+  bind(id){
+    this.querySelectorAll("input,select").forEach(el=>{
+      el.addEventListener("input", ()=>{ updateAll(); });
+      el.addEventListener("change", ()=>{ updateAll(); });
+    });
+  }
+}
+customElements.define("ScenarioForm", ScenarioForm);
+
+/* =========================
+   Berechnungen Szenario
+   ========================= */
+function readScenario(id){
+  const g = (sel)=> document.getElementById(`${id}_${sel}`);
+
+  const mode = g("mode").value; // "temp_only"|"cool_dehum"|"heat_humid"
+  const etaWRG = clamp(num(g("etaWRG").value)/100, 0, 1);
+  const etaX   = clamp(num(g("etaX").value)/100, 0, 1);
+  const rhoMode = g("rhoMode").value;
+
+  const Vdot_NB = clamp(num(g("V_NB").value), 0, 500000);
+  const Vdot_AB = clamp(num(g("V_AB").value), 0, 500000);
+  const dp      = clamp(num(g("dp").value), 0, 4000);
+  const etaFan  = clamp(num(g("etaFan").value)/100, 0.0001, 1);
+  const etaMot  = clamp(num(g("etaMot").value)/100, 0.0001, 1);
+
+  // Zustandspunkte
+  function S(key){
+    const T = num(g(`${key}_T`).value);
+    const H = num(g(`${key}_H`).value);
+    const Hm = g(`${key}_Hmode`).value;
+    const st = normalizeState(T, H, Hm);
+    const info = document.getElementById(`${id}_${key}_info`);
+    info.textContent = `x = ${st.gpkg.toFixed(2)} g/kg • φ = ${st.RH.toFixed(1)} % • h = ${st.h.toFixed(1)} kJ/kg`;
+    return {T_C: T, humidityValue:H, humidityMode: Hm, x: st.x, h: st.h, RH: st.RH, gpkg: st.gpkg };
+  }
+  const OUT_H = S("OUT_H");
+  const OUT_C = S("OUT_C");
+  const ROOM  = S("ROOM");
+  const SUP_NB= S("SUP_NB");
+  const SUP_AB= S("SUP_AB");
+
+  return {
+    mode, fan:{Vdot_NB, Vdot_AB, deltaP: dp, etaFan, etaMot, etaWRG, etaX, rhoMode},
+    OUT_H, OUT_C, ROOM, SUP_NB, SUP_AB
+  };
 }
 
-function createStatePointField(prefix, id, label, temp, hum) {
-    return `
-        <div class="lg:col-span-1">
-            <label class="block text-sm font-medium text-gray-700">${label}</label>
-            <div class="grid grid-cols-3 gap-2 mt-1">
-                <div class="col-span-1">
-                    <div class="input-group">
-                        <input type="number" id="${prefix}-${id}-temp" value="${temp}" step="0.5" min="-40" max="60" class="input-field" title="Temperatur">
-                        <span class="unit-label">°C</span>
-                    </div>
-                </div>
-                <div class="col-span-2 flex items-center gap-2">
-                    <div class="input-group">
-                        <input type="number" id="${prefix}-${id}-hum" value="${hum}" step="1" min="0" max="100" class="input-field" title="Feuchte">
-                    </div>
-                    <select id="${prefix}-${id}-hum-type" class="input-field !w-auto" title="Feuchte-Einheit">
-                        <option value="rh" selected>% r.F.</option>
-                        <option value="ah">g/kg</option>
-                    </select>
-                </div>
-            </div>
-        </div>
-    `;
+function scenarioAnnualResult(scn, sched, hHeat, hCool, prices, eerOpt){
+  // WRG-Austritt (T) Heiz-/Kühlperiode
+  const T_wrg_H = afterWRG_T(scn.OUT_H.T_C, scn.ROOM.T_C, scn.fan.etaWRG, "heating");
+  const T_wrg_C = afterWRG_T(scn.OUT_C.T_C, scn.ROOM.T_C, scn.fan.etaWRG, "cooling");
+
+  // x nach WRG (optional mit Feuchteübertrag)
+  const x_wrg_H = afterWRG_x(scn.OUT_H.x, scn.ROOM.x, scn.fan.etaX);
+  const x_wrg_C = afterWRG_x(scn.OUT_C.x, scn.ROOM.x, scn.fan.etaX);
+
+  const h_wrg_H = h_kJ_per_kg(T_wrg_H, x_wrg_H);
+  const h_wrg_C = h_kJ_per_kg(T_wrg_C, x_wrg_C);
+
+  // Dichten
+  const rhoNB = (scn.fan.rhoMode==="calc") ? rho_moist_air(scn.SUP_NB.T_C, scn.SUP_NB.x) : 1.2;
+  const rhoAB = (scn.fan.rhoMode==="calc") ? rho_moist_air(scn.SUP_AB.T_C, scn.SUP_AB.x) : 1.2;
+
+  // Massenströme [kg/s]
+  const mdot_NB = (scn.fan.Vdot_NB * rhoNB) / 3600.0;
+  const mdot_AB = (scn.fan.Vdot_AB * rhoAB) / 3600.0;
+
+  // Thermische Leistungen [kW]
+  const Pth_NB_H = mdot_NB * Math.abs(scn.SUP_NB.h - h_wrg_H);
+  const Pth_NB_C = mdot_NB * Math.abs(scn.SUP_NB.h - h_wrg_C);
+  const Pth_AB_H = mdot_AB * Math.abs(scn.SUP_AB.h - h_wrg_H);
+  const Pth_AB_C = mdot_AB * Math.abs(scn.SUP_AB.h - h_wrg_C);
+
+  // Ventilatorleistung [kW]
+  const Pvent_NB = (scn.fan.Vdot_NB * scn.fan.deltaP) / (scn.fan.etaFan * scn.fan.etaMot * 3600 * 1000);
+  const Pvent_AB = (scn.fan.Vdot_AB * scn.fan.deltaP) / (scn.fan.etaFan * scn.fan.etaMot * 3600 * 1000);
+
+  // Jahresstunden
+  const h_NB = sched.NB_h_per_a, h_AB = sched.AB_h_per_a;
+
+  // Heiz/Kühl-Anteile
+  hHeat = Math.max(0, hHeat||0); hCool = Math.max(0, hCool||0);
+  const shareHeat = (hHeat + hCool) > 0 ? (hHeat / (hHeat + hCool)) : 0.5;
+  const h_NB_H = h_NB * shareHeat, h_NB_C = h_NB * (1-shareHeat);
+  const h_AB_H = h_AB * shareHeat, h_AB_C = h_AB * (1-shareHeat);
+
+  // Energien [kWh/a]
+  const Eth_heat = Pth_NB_H*h_NB_H + Pth_AB_H*h_AB_H;
+  const Eth_cold = Pth_NB_C*h_NB_C + Pth_AB_C*h_AB_C;
+  const Eel_vent = Pvent_NB*h_NB + Pvent_AB*h_AB;
+
+  // Kosten
+  let K_heat = Eth_heat * prices.heat;
+  let K_cold;
+  if (eerOpt > 0){
+    const E_el_for_cold = Eth_cold / eerOpt;
+    K_cold = E_el_for_cold * prices.el;
+  } else {
+    K_cold = Eth_cold * prices.cold;
+  }
+  const K_el = Eel_vent * prices.el;
+  const total = K_heat + K_cold + K_el;
+
+  // Kosten/h (Referenz = NB Lasten)
+  const K_per_h_heat = Pth_NB_H * prices.heat;
+  const K_per_h_cold = (eerOpt>0) ? (Pth_NB_C/ eerOpt) * prices.el : Pth_NB_C * prices.cold;
+  const K_per_h_vent = Pvent_NB * prices.el;
+
+  // Plausibilitäts-Hinweise
+  const hints=[];
+  if (scn.SUP_NB.RH>65) hints.push("Zuluft (NB) relative Feuchte &gt; 65 % – Kondensations-/Komfortprüfung empfohlen.");
+  if (scn.SUP_NB.RH<20) hints.push("Zuluft (NB) relative Feuchte &lt; 20 % – mögliche Überbefeuchtung prüfen (falls Befeuchten aktiv).");
+  if (scn.fan.Vdot_NB>400000 && scn.fan.deltaP>1500) hints.push("Sehr hoher Volumenstrom und Druckverlust – Ventilatorkennlinie/Schall prüfen.");
+  if (scn.fan.etaFan<0.5) hints.push("Ventilatorwirkungsgrad &lt; 50 % – Effizienzpotenzial prüfen.");
+  if (Math.abs(scn.SUP_NB.h - h_wrg_H) < 3 && Math.abs(scn.SUP_NB.h - h_wrg_C) < 3)
+      hints.push("WRG deckt Großteil der Last – Nachheiz-/Nachtkühlbedarf gering.");
+
+  return {
+    points:{T_wrg_H, T_wrg_C, x_wrg_H, x_wrg_C, h_wrg_H, h_wrg_C},
+    power:{thermal:{NB_H:Pth_NB_H, NB_C:Pth_NB_C, AB_H:Pth_AB_H, AB_C:Pth_AB_C}, fan:{NB:Pvent_NB, AB:Pvent_AB}},
+    energy:{thermal_heat:Eth_heat, thermal_cold:Eth_cold, fan_el:Eel_vent},
+    costs:{heat:K_heat, cold:K_cold, el:K_el, total},
+    cost_per_h:{heat:K_per_h_heat, cold:K_per_h_cold, vent:K_per_h_vent},
+    shares:{heat:shareHeat, cool:1-shareHeat},
+    hints
+  };
 }
 
-function createScheduler(prefix) {
-    const days = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'];
-    let html = '<div class="grid grid-cols-25 gap-1 text-xs text-center">';
-    // Header
-    html += '<div></div>'; // Ecke
-    for (let i = 0; i < 24; i++) {
-        html += `<div class="font-semibold text-gray-500">${i}</div>`;
+function compareScenarios(base, opt){
+  function diff(a,b){ return b-a; }
+  return {
+    base, opt,
+    diff:{
+      costs:{
+        heat: diff(base.costs.heat, opt.costs.heat),
+        cold: diff(base.costs.cold, opt.costs.cold),
+        el:   diff(base.costs.el,   opt.costs.el),
+        total:diff(base.costs.total,opt.costs.total),
+      },
+      energy:{
+        thermal_heat: diff(base.energy.thermal_heat, opt.energy.thermal_heat),
+        thermal_cold: diff(base.energy.thermal_cold, opt.energy.thermal_cold),
+        fan_el:       diff(base.energy.fan_el,       opt.energy.fan_el),
+      }
     }
-    // Rows
-    days.forEach((day, dayIndex) => {
-        html += `<div class="font-semibold text-gray-500 flex items-center justify-center">${day}</div>`;
-        for (let hour = 0; hour < 24; hour++) {
-            // Default Betriebszeiten: Mo-Fr 7-18 Uhr Normal, sonst AUS
-            let defaultMode = 'aus';
-            if (dayIndex < 5 && hour >= 7 && hour < 18) {
-                defaultMode = 'normal';
-            }
-            html += `
-                <div class="scheduler-cell mode-${defaultMode}" data-prefix="${prefix}" data-day="${dayIndex}" data-hour="${hour}" onclick="cycleMode(this)">
-                    <div class="cell-content"></div>
-                </div>`;
-        }
-    });
-    html += '</div>';
-     html += `
-        <div class="flex items-center justify-center gap-6 mt-4 text-sm">
-            <div class="flex items-center gap-2"><div class="w-4 h-4 rounded-full mode-normal"></div> Normal</div>
-            <div class="flex items-center gap-2"><div class="w-4 h-4 rounded-full mode-absenk"></div> Absenk</div>
-            <div class="flex items-center gap-2"><div class="w-4 h-4 rounded-full mode-aus"></div> AUS</div>
-        </div>
-    `;
-    return html;
+  };
 }
 
-// --- EINGABEVALIDIERUNG UND INTERAKTIVITÄT ---
-function addInputValidation() {
-    document.querySelectorAll('input[type="number"]').forEach(input => {
-        input.addEventListener('input', () => {
-            const min = parseFloat(input.min);
-            const max = parseFloat(input.max);
-            let value = parseFloat(input.value);
+/* =========================
+   UI: Lesen, Rechnen, Rendern
+   ========================= */
+const charts = {pieBase:null, pieOpt:null, bar:null};
 
-            if (!isNaN(value)) {
-                if (value < min) input.value = min;
-                if (value > max) input.value = max;
-            }
-        });
-    });
+function scheduleChanged(){ updateAll(); }
+
+function updateAll(){
+  const sched = annualHours();
+  const hHeat = num(document.getElementById("hHeat").value,0);
+  const hCool = num(document.getElementById("hCool").value,0);
+  const prices = {
+    heat: num(document.getElementById("cHeat").value,0),
+    cold: num(document.getElementById("cCold").value,0),
+    el:   num(document.getElementById("cEl").value,0),
+  };
+  const eerOpt = num(document.getElementById("eer").value,0);
+
+  const A_in = readScenario("base");
+  const B_in = readScenario("opt");
+
+  const A = scenarioAnnualResult(A_in, sched, hHeat, hCool, prices, eerOpt);
+  const B = scenarioAnnualResult(B_in, sched, hHeat, hCool, prices, eerOpt);
+  const C = compareScenarios(A,B);
+
+  // KPIs
+  setText("kBase", euro(A.costs.total));
+  setText("kOpt",  euro(B.costs.total));
+  const savingAbs = A.costs.total - B.costs.total;
+  setText("kSaveAbs", euro(savingAbs));
+  const savingRel = A.costs.total>0 ? (1 - B.costs.total/A.costs.total)*100 : 0;
+  setText("kSaveRel", savingRel.toFixed(1).replace(".",",")+" %");
+
+  // Diagramme
+  renderPies(A,B);
+  renderBars(A,B);
+
+  // Hinweise
+  renderHints([...A.hints, ...B.hints]);
+
+  // Bericht
+  renderReport(A,B,C,sched,hHeat,hCool);
 }
 
-const modes = ['normal', 'absenk', 'aus'];
-function cycleMode(cell) {
-    let currentMode = '';
-    modes.forEach(mode => {
-        if (cell.classList.contains(`mode-${mode}`)) {
-            currentMode = mode;
-        }
-    });
-    
-    const currentIndex = modes.indexOf(currentMode);
-    const nextIndex = (currentIndex + 1) % modes.length;
-    
-    cell.classList.remove(`mode-${currentMode}`);
-    cell.classList.add(`mode-${modes[nextIndex]}`);
+function euro(v){ return (v||0).toLocaleString("de-DE",{minimumFractionDigits:0, maximumFractionDigits:0})+" €"; }
+function kwh(v){ return (v||0).toLocaleString("de-DE",{minimumFractionDigits:0, maximumFractionDigits:0})+" kWh/a"; }
+function powerKW(v){ return (v||0).toLocaleString("de-DE",{minimumFractionDigits:1, maximumFractionDigits:1})+" kW"; }
+function setText(id, txt){ const el=document.getElementById(id); if(el) el.textContent = txt; }
+
+function renderPies(A,B){
+  const dataA=[A.costs.heat, A.costs.cold, A.costs.el];
+  const dataB=[B.costs.heat, B.costs.cold, B.costs.el];
+  const labels=["Heizen €","Kühlen €","Ventilator-Strom €"];
+  charts.pieBase?.destroy();
+  charts.pieOpt?.destroy();
+  charts.pieBase = new Chart(document.getElementById("pieBase").getContext("2d"), {
+    type:"pie",
+    data:{labels, datasets:[{data:dataA}]}, options:{plugins:{legend:{labels:{color:"#e5e7eb"}}}}
+  });
+  charts.pieOpt = new Chart(document.getElementById("pieOpt").getContext("2d"), {
+    type:"pie",
+    data:{labels, datasets:[{data:dataB}]}, options:{plugins:{legend:{labels:{color:"#e5e7eb"}}}}
+  });
+}
+function renderBars(A,B){
+  const labels=["Heizen","Kühlen","Ventilator-Strom","Gesamt"];
+  const base=[A.costs.heat, A.costs.cold, A.costs.el, A.costs.total];
+  const opt =[B.costs.heat, B.costs.cold, B.costs.el, B.costs.total];
+  charts.bar?.destroy();
+  charts.bar = new Chart(document.getElementById("barCompare").getContext("2d"), {
+    type:"bar",
+    data:{labels, datasets:[
+      {label:"Basis €", data:base},
+      {label:"Optimierung €", data:opt}
+    ]},
+    options:{plugins:{legend:{labels:{color:"#e5e7eb"}}}, scales:{x:{ticks:{color:"#cbd5e1"}}, y:{ticks:{color:"#cbd5e1"}}}}
+  });
+}
+function renderHints(list){
+  const el = document.getElementById("hints");
+  if(!list.length){ el.innerHTML = "<small class='muted'>Keine Auffälligkeiten aus den Plausibilitätsprüfungen.</small>"; return; }
+  el.innerHTML = "<ul>"+ list.map(h=>`<li class="hl">${h}</li>`).join("") +"</ul>";
 }
 
-// --- HAUPTBERECHNUNGSLOGIK ---
-function runAnalysis() {
-    const basisData = calculateScenario('basis');
-    const optimierungData = calculateScenario('optimierung');
-
-    if (!basisData || !optimierungData) {
-        showModal("Bitte überprüfen Sie Ihre Eingaben. Eine Berechnung war nicht möglich.");
-        return;
-    }
-    
-    const savings = calculateSavings(basisData, optimierungData);
-
-    displayResults(basisData, optimierungData, savings);
-    document.getElementById('results-container').classList.remove('hidden');
-    document.getElementById('results-container').scrollIntoView({ behavior: 'smooth' });
+function renderReport(A,B,C,sched,hHeat,hCool){
+  const html = `
+  <div class="cols-2 grid">
+    <div>
+      <h3>Leistungen (Normalbetrieb)</h3>
+      <table>
+        <tr><th>Größe</th><th>Basis</th><th>Optimierung</th><th>Diff (Opt−Basis)</th></tr>
+        <tr><td>Thermisch – Heizen</td><td>${powerKW(A.power.thermal.NB_H)}</td><td>${powerKW(B.power.thermal.NB_H)}</td><td>${powerKW(B.power.thermal.NB_H-A.power.thermal.NB_H)}</td></tr>
+        <tr><td>Thermisch – Kühlen</td><td>${powerKW(A.power.thermal.NB_C)}</td><td>${powerKW(B.power.thermal.NB_C)}</td><td>${powerKW(B.power.thermal.NB_C-A.power.thermal.NB_C)}</td></tr>
+        <tr><td>Ventilator</td><td>${powerKW(A.power.fan.NB)}</td><td>${powerKW(B.power.fan.NB)}</td><td>${powerKW(B.power.fan.NB-A.power.fan.NB)}</td></tr>
+      </table>
+      <h3>Kosten pro Stunde (NB)</h3>
+      <table>
+        <tr><th>Größe</th><th>Basis</th><th>Optimierung</th><th>Diff</th></tr>
+        <tr><td>Heizen</td><td>${A.cost_per_h.heat.toFixed(2)} €</td><td>${B.cost_per_h.heat.toFixed(2)} €</td><td>${(B.cost_per_h.heat-A.cost_per_h.heat).toFixed(2)} €</td></tr>
+        <tr><td>Kühlen</td><td>${A.cost_per_h.cold.toFixed(2)} €</td><td>${B.cost_per_h.cold.toFixed(2)} €</td><td>${(B.cost_per_h.cold-A.cost_per_h.cold).toFixed(2)} €</td></tr>
+        <tr><td>Ventilator-Strom</td><td>${A.cost_per_h.vent.toFixed(2)} €</td><td>${B.cost_per_h.vent.toFixed(2)} €</td><td>${(B.cost_per_h.vent-A.cost_per_h.vent).toFixed(2)} €</td></tr>
+      </table>
+    </div>
+    <div>
+      <h3>Jahresenergie (kWh/a)</h3>
+      <table>
+        <tr><th>Größe</th><th>Basis</th><th>Optimierung</th><th>Diff (Opt−Basis)</th></tr>
+        <tr><td>Thermisch – Heizen</td><td>${kwh(A.energy.thermal_heat)}</td><td>${kwh(B.energy.thermal_heat)}</td><td>${kwh(B.energy.thermal_heat-A.energy.thermal_heat)}</td></tr>
+        <tr><td>Thermisch – Kühlen</td><td>${kwh(A.energy.thermal_cold)}</td><td>${kwh(B.energy.thermal_cold)}</td><td>${kwh(B.energy.thermal_cold-A.energy.thermal_cold)}</td></tr>
+        <tr><td>Ventilator-Strom</td><td>${kwh(A.energy.fan_el)}</td><td>${kwh(B.energy.fan_el)}</td><td>${kwh(B.energy.fan_el-A.energy.fan_el)}</td></tr>
+      </table>
+      <h3>Jahreskosten (€/a)</h3>
+      <table>
+        <tr><th>Größe</th><th>Basis</th><th>Optimierung</th><th>Diff (Opt−Basis)</th></tr>
+        <tr><td>Heizen</td><td>${euro(A.costs.heat)}</td><td>${euro(B.costs.heat)}</td><td>${euro(B.costs.heat-A.costs.heat)}</td></tr>
+        <tr><td>Kühlen</td><td>${euro(A.costs.cold)}</td><td>${euro(B.costs.cold)}</td><td>${euro(B.costs.cold-A.costs.cold)}</td></tr>
+        <tr><td>Ventilator-Strom</td><td>${euro(A.costs.el)}</td><td>${euro(B.costs.el)}</td><td>${euro(B.costs.el-A.costs.el)}</td></tr>
+        <tr><th>Summe</th><th>${euro(A.costs.total)}</th><th>${euro(B.costs.total)}</th><th>${euro(B.costs.total-A.costs.total)}</th></tr>
+      </table>
+      <div class="footnote">Betriebsstunden/Jahr (aus Wochenplaner): NB ${sched.NB_h_per_a.toFixed(0)} h • AB ${sched.AB_h_per_a.toFixed(0)} h • AUS ${sched.OFF_h_per_a.toFixed(0)} h. Heiz/Kühl-Anteile: ${(A.shares.heat*100).toFixed(0)} % Heizen / ${(A.shares.cool*100).toFixed(0)} % Kühlen.</div>
+    </div>
+  </div>`;
+  document.getElementById("report").innerHTML = html;
 }
 
-function getInputs(prefix) {
-    const data = {};
-    const form = document.getElementById(`form-${prefix}`);
-    form.querySelectorAll('input, select').forEach(el => {
-        const id = el.id.replace(`${prefix}-`, '');
-        data[id] = el.type === 'number' ? parseFloat(el.value) : el.value;
-    });
-    return data;
-}
+/* Initial rechnen */
+updateAll();
 
-function getStatePoint(prefix, id) {
-    const temp = parseFloat(document.getElementById(`${prefix}-${id}-temp`).value);
-    const hum = parseFloat(document.getElementById(`${prefix}-${id}-hum`).value);
-    const humType = document.getElementById(`${prefix}-${id}-hum-type`).value;
-    
-    let absHum_g_kg, relHum, enthalpy;
-
-    if (humType === 'rh') {
-        relHum = hum;
-        absHum_g_kg = psychroLib.getAbsoluteHumidity(temp, relHum);
-        enthalpy = psychroLib.getEnthalpyFromRelHum(temp, relHum);
-    } else { // ah
-        absHum_g_kg = hum;
-        relHum = psychroLib.getRelativeHumidity(temp, absHum_g_kg);
-        enthalpy = psychroLib.getEnthalpyFromAbsHum(temp, absHum_g_kg);
-    }
-    return { temp, relHum, absHum_g_kg, enthalpy };
-}
-
-function getSchedulerHours(prefix) {
-    const hours = { normal: 0, absenk: 0, aus: 0 };
-    document.querySelectorAll(`.scheduler-cell[data-prefix="${prefix}"]`).forEach(cell => {
-        if (cell.classList.contains('mode-normal')) hours.normal++;
-        else if (cell.classList.contains('mode-absenk')) hours.absenk++;
-        else hours.aus++;
-    });
-    return hours;
-}
-
-function calculateScenario(prefix) {
-    const i = getInputs(prefix);
-    const anlagenmodus = document.getElementById('anlagenmodus').value;
-
-    // Zustandspunkte holen
-    const aussenluftHeiz = getStatePoint(prefix, 'aussenluftHeiz');
-    const aussenluftKuehl = getStatePoint(prefix, 'aussenluftKuehl');
-    const abluft = getStatePoint(prefix, 'abluft');
-    const zuluftNormal = getStatePoint(prefix, 'zuluftNormal');
-    const zuluftAbsenk = getStatePoint(prefix, 'zuluftAbsenk');
-
-    // Betriebsstunden aus Planer
-    const weeklyHours = getSchedulerHours(prefix);
-    const totalOpHours = weeklyHours.normal + weeklyHours.absenk;
-    if (totalOpHours === 0) return createEmptyResult(); // Keine Betriebsstunden -> keine Kosten
-
-    const ratioNormal = weeklyHours.normal / totalOpHours;
-    const ratioAbsenk = weeklyHours.absenk / totalOpHours;
-
-    const h_normal_heiz = ratioNormal * i.heizstunden;
-    const h_absenk_heiz = ratioAbsenk * i.heizstunden;
-    const h_normal_kuehl = ratioNormal * i.kuehlstunden;
-    const h_absenk_kuehl = ratioAbsenk * i.kuehlstunden;
-
-    // Berechnung für Normalbetrieb
-    const resNormal = calculateMode(
-        i.volumenstromNormal, i.druckverlust, i.wirkungsgradVentilator, i.wirkungsgradMotor, i.wirkungsgradWRG,
-        aussenluftHeiz, aussenluftKuehl, abluft, zuluftNormal,
-        h_normal_heiz, h_normal_kuehl, i.kostenWaerme, i.kostenKaelte, i.kostenStrom, anlagenmodus
-    );
-
-    // Berechnung für Absenkbetrieb
-    const resAbsenk = calculateMode(
-        i.volumenstromAbsenk, i.druckverlust, i.wirkungsgradVentilator, i.wirkungsgradMotor, i.wirkungsgradWRG,
-        aussenluftHeiz, aussenluftKuehl, abluft, zuluftAbsenk,
-        h_absenk_heiz, h_absenk_kuehl, i.kostenWaerme, i.kostenKaelte, i.kostenStrom, anlagenmodus
-    );
-    
-    // Gesamtergebnis zusammenfassen
-    return {
-        energyFan: resNormal.energyFan + resAbsenk.energyFan,
-        costFan: resNormal.costFan + resAbsenk.costFan,
-        energyHeat: resNormal.energyHeat + resAbsenk.energyHeat,
-        costHeat: resNormal.costHeat + resAbsenk.costHeat,
-        energyCool: resNormal.energyCool + resAbsenk.energyCool,
-        costCool: resNormal.costCool + resAbsenk.costCool,
-        totalCost: (resNormal.costFan + resAbsenk.costFan) + (resNormal.costHeat + resAbsenk.costHeat) + (resNormal.costCool + resAbsenk.costCool)
-    };
-}
-
-function calculateMode(volumenstrom, druckverlust, etaVent, etaMotor, etaWRG, aussenHeiz, aussenKuehl, abluft, zuluft, h_heiz, h_kuehl, costW, costK, costS, anlagenmodus) {
-    if (volumenstrom === 0) return { energyFan: 0, costFan: 0, energyHeat: 0, costHeat: 0, energyCool: 0, costCool: 0 };
-
-    // Elektrische Leistung Ventilator [kW]
-    const powerFan = (volumenstrom * druckverlust) / (3600 * 1000 * (etaVent / 100) * (etaMotor / 100));
-    const energyFan = powerFan * (h_heiz + h_kuehl);
-    const costFan = energyFan * costS;
-
-    // Thermische Leistung
-    // Heizfall
-    const tempNachWRG_Heiz = aussenHeiz.temp + (etaWRG / 100) * (abluft.temp - aussenHeiz.temp);
-    const hNachWRG_Heiz = psychroLib.getEnthalpyFromAbsHum(tempNachWRG_Heiz, aussenHeiz.absHum_g_kg);
-    const rhoHeiz = psychroLib.getDensity(aussenHeiz.temp, aussenHeiz.absHum_g_kg);
-    const massenstromHeiz = (volumenstrom * rhoHeiz) / 3600;
-    let powerHeat = 0;
-    if (zuluft.enthalpy > hNachWRG_Heiz) {
-        powerHeat = massenstromHeiz * (zuluft.enthalpy - hNachWRG_Heiz);
-    }
-    const energyHeat = powerHeat * h_heiz;
-    const costHeat = energyHeat * costW;
-
-    // Kühlfall
-    const tempNachWRG_Kuehl = aussenKuehl.temp - (etaWRG / 100) * (aussenKuehl.temp - abluft.temp);
-    const hNachWRG_Kuehl = psychroLib.getEnthalpyFromAbsHum(tempNachWRG_Kuehl, aussenKuehl.absHum_g_kg);
-    const rhoKuehl = psychroLib.getDensity(aussenKuehl.temp, aussenKuehl.absHum_g_kg);
-    const massenstromKuehl = (volumenstrom * rhoKuehl) / 3600;
-    let powerCool = 0;
-    if (zuluft.enthalpy < hNachWRG_Kuehl) {
-        powerCool = massenstromKuehl * (hNachWRG_Kuehl - zuluft.enthalpy);
-    }
-    const energyCool = powerCool * h_kuehl;
-    const costCool = energyCool * costK;
-
-    return { energyFan, costFan, energyHeat, costHeat, energyCool, costCool };
-}
-
-function calculateSavings(basis, optimierung) {
-    const savings = {};
-    for (const key in basis) {
-        savings[key] = basis[key] - optimierung[key];
-    }
-    return savings;
-}
-
-function createEmptyResult() {
-    return { energyFan: 0, costFan: 0, energyHeat: 0, costHeat: 0, energyCool: 0, costCool: 0, totalCost: 0 };
-}
-
-// --- ERGEBNISDARSTELLUNG ---
-function displayResults(basis, optimierung, savings) {
-    // KPIs
-    document.getElementById('kpi-cost-basis').textContent = `${formatNumber(basis.totalCost)} €/a`;
-    document.getElementById('kpi-cost-optimierung').textContent = `${formatNumber(optimierung.totalCost)} €/a`;
-    document.getElementById('kpi-saving').textContent = `${formatNumber(savings.totalCost)} €/a`;
-    const savingPercent = basis.totalCost > 0 ? (savings.totalCost / basis.totalCost) * 100 : 0;
-    document.getElementById('kpi-saving-percent').textContent = `(${formatNumber(savingPercent, 1)} %)`;
-    
-    const savingKpi = document.getElementById('kpi-saving');
-    const savingPercentKpi = document.getElementById('kpi-saving-percent');
-    savingKpi.classList.toggle('saving-positive', savings.totalCost >= 0);
-    savingKpi.classList.toggle('saving-negative', savings.totalCost < 0);
-    savingPercentKpi.classList.toggle('saving-positive', savings.totalCost >= 0);
-    savingPercentKpi.classList.toggle('saving-negative', savings.totalCost < 0);
-
-    // Charts
-    updateCharts(basis, optimierung);
-
-    // Detailbericht
-    const tableBody = document.getElementById('report-table-body');
-    tableBody.innerHTML = '';
-    const totalEnergyBasis = basis.energyFan + basis.energyHeat + basis.energyCool;
-    const totalEnergyOpt = optimierung.energyFan + optimierung.energyHeat + optimierung.energyCool;
-    
-    tableBody.innerHTML += createReportRow('Ventilator-Energie', 'kWh/a', basis.energyFan, basis.costFan, optimierung.energyFan, optimierung.costFan, savings.energyFan, savings.costFan);
-    tableBody.innerHTML += createReportRow('Therm. Energie (Heizen)', 'kWh/a', basis.energyHeat, basis.costHeat, optimierung.energyHeat, optimierung.costHeat, savings.energyHeat, savings.costHeat);
-    tableBody.innerHTML += createReportRow('Therm. Energie (Kühlen)', 'kWh/a', basis.energyCool, basis.costCool, optimierung.energyCool, optimierung.costCool, savings.energyCool, savings.costCool);
-    tableBody.innerHTML += createReportRow('Gesamt', 'kWh/a', totalEnergyBasis, basis.totalCost, totalEnergyOpt, optimierung.totalCost, savings.totalCost, savings.totalCost, true);
-}
-
-function createReportRow(label, unit, energyB, costB, energyO, costO, energyS, costS, isTotal = false) {
-    const fw = isTotal ? 'font-bold' : '';
-    return `
-        <tr class="${fw}">
-            <td class="px-6 py-4 whitespace-nowrap">${label}</td>
-            <td class="px-6 py-4 whitespace-nowrap">${unit}</td>
-            <td class="px-6 py-4 whitespace-nowrap border-l">${formatNumber(energyB)}</td>
-            <td class="px-6 py-4 whitespace-nowrap">${formatNumber(costB)}</td>
-            <td class="px-6 py-4 whitespace-nowrap border-l">${formatNumber(energyO)}</td>
-            <td class="px-6 py-4 whitespace-nowrap">${formatNumber(costO)}</td>
-            <td class="px-6 py-4 whitespace-nowrap border-l">${formatNumber(energyS)}</td>
-            <td class="px-6 py-4 whitespace-nowrap">${formatNumber(costS)}</td>
-        </tr>
-    `;
-}
-
-function updateCharts(basis, optimierung) {
-    const ctxCost = document.getElementById('cost-distribution-chart').getContext('2d');
-    const ctxScenario = document.getElementById('scenario-comparison-chart').getContext('2d');
-
-    if (costDistributionChart) costDistributionChart.destroy();
-    costDistributionChart = new Chart(ctxCost, {
-        type: 'doughnut',
-        data: {
-            labels: ['Ventilator', 'Heizen', 'Kühlen'],
-            datasets: [{
-                label: 'Kostenverteilung',
-                data: [optimierung.costFan, optimierung.costHeat, optimierung.costCool],
-                backgroundColor: ['#3b82f6', '#ef4444', '#f97316'],
-                borderColor: '#ffffff',
-                borderWidth: 2
-            }]
-        },
-        options: { responsive: true, maintainAspectRatio: false }
-    });
-
-    if (scenarioComparisonChart) scenarioComparisonChart.destroy();
-    scenarioComparisonChart = new Chart(ctxScenario, {
-        type: 'bar',
-        data: {
-            labels: ['Basis-Szenario', 'Optimierungs-Szenario'],
-            datasets: [{
-                label: 'Jahreskosten in €',
-                data: [basis.totalCost, optimierung.totalCost],
-                backgroundColor: ['#6b7280', '#16a34a'],
-                borderRadius: 4
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            scales: { y: { beginAtZero: true, ticks: { callback: value => `${value} €` } } }
-        }
-    });
-}
-
-function formatNumber(num, decimals = 0) {
-    if (isNaN(num)) return '0';
-    return num.toLocaleString('de-DE', {
-        minimumFractionDigits: decimals,
-        maximumFractionDigits: decimals
-    });
-}
-
+/* =========================
+   UX: Änderungen globaler Felder neu rechnen
+   ========================= */
+["extraNB","extraAB","hHeat","hCool","cHeat","cCold","cEl","eer"].forEach(id=>{
+  document.getElementById(id).addEventListener("input", updateAll);
+  document.getElementById(id).addEventListener("change", updateAll);
+});
 </script>
 </body>
 </html>
