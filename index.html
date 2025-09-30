@@ -1,691 +1,204 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="de">
 <head>
-<meta charset="utf-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>RLT – Energie- & Kostenrechner (Szenarienvergleich)</title>
-<!-- Chart.js für Diagramme -->
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
-<style>
-  :root{
-    --bg:#0f172a; --panel:#111827; --panel2:#0b1222; --muted:#94a3b8; --text:#e5e7eb;
-    --accent:#22c55e; --warn:#f59e0b; --danger:#ef4444; --grid0:#1f2937; --grid1:#f59e0b; --grid2:#22c55e;
-  }
-  *{box-sizing:border-box}
-  body{margin:0; font-family:Inter,system-ui,Segoe UI,Arial; background:linear-gradient(180deg,#0b1120,#111827); color:var(--text)}
-  h1,h2,h3{margin:0.2rem 0 0.6rem}
-  h1{font-size:1.4rem}
-  h2{font-size:1.1rem; color:#cbd5e1}
-  h3{font-size:1rem; color:#cbd5e1}
-  small{color:var(--muted)}
-  .wrap{max-width:1300px; margin:1rem auto; padding:0 1rem}
-  .grid{display:grid; gap:12px}
-  .cols-3{grid-template-columns: 1fr 1fr 1fr}
-  .cols-2{grid-template-columns: 1fr 1fr}
-  .panel{background:linear-gradient(180deg,var(--panel),var(--panel2)); border:1px solid #1f2937; border-radius:12px; padding:12px}
-  .flex{display:flex; gap:10px; align-items:center; flex-wrap:wrap}
-  .row{display:flex; gap:8px; margin:6px 0; flex-wrap:wrap}
-  label{display:flex; flex-direction:column; gap:3px; font-size:0.9rem; min-width:160px}
-  input, select{background:#0b1222; color:var(--text); border:1px solid #243042; border-radius:8px; padding:8px 10px; outline:none; font-size:0.95rem}
-  input[type=number]{width:160px}
-  input:invalid{border-color:var(--danger)}
-  .field-inline{display:flex; gap:6px; align-items:center}
-  .unit{font-size:0.85rem; color:var(--muted)}
-  .btn{background:#0b1222; border:1px solid #263142; color:#e5e7eb; padding:8px 12px; border-radius:10px; cursor:pointer}
-  .btn:hover{border-color:#3b4a61}
-  .btn-accent{background:#052e1a; border-color:#14532d}
-  .kpi{display:grid; grid-template-columns: repeat(4,1fr); gap:10px}
-  .kpi .card{background:#0b1222; border:1px solid #1f2937; border-radius:12px; padding:12px}
-  .card h3{font-weight:600; font-size:0.95rem}
-  .card .val{font-size:1.2rem; margin-top:4px}
-  .ok{color:var(--accent)} .warn{color:var(--warn)} .bad{color:var(--danger)}
-  /* Wochenplaner */
-  .planner{display:grid; grid-template-columns: 80px repeat(7, 1fr); gap:6px}
-  .planner .daycol{display:grid; grid-template-rows: repeat(48, 12px); gap:2px}
-  .cell{border-radius:3px; background:var(--grid0); cursor:crosshair}
-  .cell[data-state="0"]{background:var(--grid0)}
-  .cell[data-state="1"]{background:var(--grid1)}
-  .cell[data-state="2"]{background:var(--grid2)}
-  .legend{display:flex; gap:10px; align-items:center; flex-wrap:wrap}
-  .swatch{width:14px; height:14px; border-radius:3px; display:inline-block}
-  table{width:100%; border-collapse:collapse; margin-top:6px}
-  th,td{border-bottom:1px solid #1f2937; padding:8px 6px; text-align:right}
-  th:first-child, td:first-child{text-align:left}
-  .footnote{color:var(--muted); font-size:0.85rem}
-  .hl{color:#cbd5e1}
-  .two{display:grid; grid-template-columns: 1fr 1fr; gap:12px}
-  .danger-text{color:var(--danger)}
-  .muted{color:var(--muted)}
-  @media (max-width:1000px){ .kpi{grid-template-columns:1fr 1fr} .cols-3{grid-template-columns:1fr} .cols-2{grid-template-columns:1fr} .two{grid-template-columns:1fr}}
-</style>
+  <meta charset="UTF-8">
+  <title>Betriebsanweisung Generator</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.9.3/html2pdf.bundle.min.js"></script>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 0; padding: 0; background: #f5f5f5; }
+    .page { width: 210mm; min-height: 297mm; margin: 10px auto; background: white; padding: 20mm 10mm 20mm 10mm; box-shadow: 0 0 5px rgba(0,0,0,0.1); border: 4px solid var(--hauptfarbe, #005b99); }
+
+    .header { display: grid; grid-template-columns: 1fr 2fr 1fr; margin-bottom: 10px; border-bottom: 2px solid var(--hauptfarbe, #005b99); }
+    .header div { border-right: 2px solid var(--hauptfarbe, #005b99); padding: 6px; font-size: 10pt; background: #fff; }
+    .header div:last-child { border-right: none; }
+    .header .title { text-align: center; font-weight: bold; }
+
+    .arbeitsangaben { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; font-size: 10pt; border-top: 2px solid var(--hauptfarbe, #005b99); border-bottom: 2px solid var(--hauptfarbe, #005b99); margin-bottom: 10px; }
+    .arbeitsangaben div { border-right: 2px solid var(--hauptfarbe, #005b99); padding: 6px; }
+    .arbeitsangaben div:last-child { border-right: none; }
+
+    .section { margin: 12px 0; border: 2px solid var(--hauptfarbe, #005b99); page-break-inside: avoid; }
+    .section h2 { margin: 0; background: var(--hauptfarbe, #005b99); color: white; padding: 4px; font-size: 11pt; }
+    .section .content { display: flex; align-items: flex-start; padding: 6px; }
+    .section .picto-dropzone { width: 70px; min-height: 100px; border-right: 2px dashed #ccc; padding: 5px; display: flex; flex-direction: column; align-items: center; }
+    .section .picto-dropzone img { max-width: 60px; margin: 5px 0; cursor: move; }
+    .section .text { flex: 1; padding-left: 10px; }
+    .section textarea { width: 100%; border: none; font-size: 10pt; padding: 0; box-sizing: border-box; resize: none; overflow-y: hidden; line-height: 1.4; white-space: pre-wrap; }
+    .section textarea.bullet-text { padding-left: 15px; text-indent: -10px; }
+
+    .footer { margin-top: 15px; border-top: 2px solid var(--hauptfarbe, #005b99); display: flex; justify-content: space-between; padding: 6px; font-size: 10pt; }
+
+    .color-picker { margin: 10px auto; text-align: center; }
+    .preset-buttons button, .export-buttons button { margin: 5px; padding: 5px 10px; border: none; cursor: pointer; font-size: 10pt; border-radius: 4px; color: white; }
+    .export-buttons { text-align: center; margin: 20px; }
+    #pictoPreview img { max-width: 60px; margin: 5px; cursor: grab; border: 1px solid #ccc; padding: 2px; background: #fff; }
+    .picto-controls { text-align: center; }
+    .picto-controls button { font-size: 9pt; margin: 2px; }
+  </style>
 </head>
 <body>
-<div class="wrap">
-  <h1>RLT – Energie- & Kostenrechner (Enthalpie-basiert) • Szenarienvergleich</h1>
-  <small>Bereiche: Eingaben • Übersicht (Dashboard) • Detailbericht. Alle Berechnungen auf Basis der spezifischen Enthalpie (kJ/kg).</small>
+  <div class="color-picker">
+    <div class="preset-buttons">
+      <p>Vordefinierte Farbschemata mit Rechtsgrundlage:</p>
+      <button style="background:#005b99" onclick="setBA('BetrSichV','BA-T-01','#005b99','#cce0f5')">Maschinen (Blau) – BetrSichV</button>
+      <button style="background:#f28c00" onclick="setBA('GefStoffV','BA-G-01','#f28c00','#ffe0b3')">Gefahrstoffe (Orange) – GefStoffV</button>
+      <button style="background:#2e7d32" onclick="setBA('BioStoffV','BA-A-03','#2e7d32','#c8e6c9')">PSA/Biologisch (Grün) – BioStoffV</button>
+    </div>
+  </div>
 
-  <!-- Eingaben -->
-  <div class="grid cols-3" style="margin-top:12px">
-    <!-- Betriebsprofil & Kosten -->
-    <div class="panel">
-      <h2>1) Betriebsprofil & Energiekosten</h2>
-      <div style="margin-top:6px">
-        <div class="legend">
-          <div class="swatch" style="background:var(--grid2)"></div><span>Normalbetrieb</span>
-          <div class="swatch" style="background:var(--grid1)"></div><span>Absenkbetrieb</span>
-          <div class="swatch" style="background:var(--grid0)"></div><span>Anlage AUS</span>
-        </div>
-        <div class="row">
-          <label>Malmodus
-            <select id="paintMode">
-              <option value="2">Normalbetrieb „grün“</option>
-              <option value="1">Absenkbetrieb „orange“</option>
-              <option value="0">Anlage AUS „dunkel“</option>
-            </select>
-          </label>
-          <button class="btn" id="btnFillNB">Woche: Werktage 8–18 Uhr = Normalbetrieb</button>
-          <button class="btn" id="btnClear">Alles AUS</button>
-        </div>
-        <div class="planner" id="planner"></div>
-        <div class="row">
-          <label>Zusatzstunden NB pro Jahr
-            <input type="number" id="extraNB" min="0" step="0.5" value="0">
-          </label>
-          <label>Zusatzstunden AB pro Jahr
-            <input type="number" id="extraAB" min="0" step="0.5" value="0">
-          </label>
-          <label>Heizstunden pro Jahr
-            <input type="number" id="hHeat" min="0" step="1" value="2000">
-          </label>
-          <label>Kühlstunden pro Jahr
-            <input type="number" id="hCool" min="0" step="1" value="800">
-          </label>
-        </div>
-        <div class="row">
-          <label>Wärmekosten [€/kWh]
-            <input type="number" id="cHeat" min="0" step="0.001" value="0.08">
-          </label>
-          <label>Kältekosten [€/kWh] <small class="muted">(direkte Verrechnung oder via EER unten)</small>
-            <input type="number" id="cCold" min="0" step="0.001" value="0.14">
-          </label>
-          <label>Stromkosten [€/kWh]
-            <input type="number" id="cEl" min="0" step="0.001" value="0.25">
-          </label>
-        </div>
-        <div class="row">
-          <label>Alternative: Kältemaschine EER <small class="muted">(optional)</small>
-            <input type="number" id="eer" min="0" step="0.1" value="">
-          </label>
-          <div class="footnote">Wenn EER &gt; 0 gesetzt ist, werden **Kältekosten** = (Kälte-Energie / EER) · Strompreis berechnet – der Wert in „Kältekosten €/kWh“ wird ignoriert.</div>
-        </div>
+  <div id="baPage" class="page">
+    <div class="header">
+      <div>Firma: <input type="text" id="firma" placeholder="Firma" style="width:90%"></div>
+      <div class="title">BETRIEBSANWEISUNG <br><small id="rechtsgrundlage">gem. BetrSichV</small></div>
+      <div>Nr.: <input id="banummer" type="text" value="BA-T-01" style="width:80%"></div>
+    </div>
+
+    <div class="arbeitsangaben">
+      <div>Bereich: <input id="bereich" type="text" placeholder="Bereich" style="width:90%"></div>
+      <div>Arbeitsplatz: <input id="arbeitsplatz" type="text" placeholder="Arbeitsplatz" style="width:90%"></div>
+      <div>Tätigkeit: <input id="taetigkeit" type="text" placeholder="Tätigkeit" style="width:90%"></div>
+      <div>Stand: <input id="stand" type="text" placeholder="Stand" style="width:90%"></div>
+    </div>
+
+    <div class="section" ondrop="dropPicto(event,this)" ondragover="allowDrop(event)">
+      <h2>1. Anwendungsbereich</h2>
+      <div class="content">
+        <div class="picto-dropzone" id="pictos1"></div>
+        <div class="text"><textarea id="text1" class="bullet-text" oninput="formatBullets(this)" placeholder="• "></textarea></div>
       </div>
     </div>
 
-    <!-- Szenario Basis -->
-    <div class="panel">
-      <h2>2) Basis-Szenario (Ist)</h2>
-      <ScenarioForm id="base"></ScenarioForm>
-    </div>
-
-    <!-- Szenario Optimierung -->
-    <div class="panel">
-      <h2>3) Optimierungs-Szenario (Soll)</h2>
-      <ScenarioForm id="opt"></ScenarioForm>
-    </div>
-  </div>
-
-  <!-- Übersicht / Dashboard -->
-  <div class="panel" style="margin-top:12px">
-    <h2>Übersicht (Dashboard)</h2>
-    <div class="kpi" id="kpis">
-      <div class="card"><h3>Kosten Basis (€/a)</h3><div class="val" id="kBase">–</div></div>
-      <div class="card"><h3>Kosten Optimierung (€/a)</h3><div class="val" id="kOpt">–</div></div>
-      <div class="card"><h3>Einsparung absolut (€/a)</h3><div class="val ok" id="kSaveAbs">–</div></div>
-      <div class="card"><h3>Einsparung relativ (%)</h3><div class="val ok" id="kSaveRel">–</div></div>
-    </div>
-    <div class="two" style="margin-top:10px">
-      <div><canvas id="pieBase" height="160"></canvas></div>
-      <div><canvas id="pieOpt" height="160"></canvas></div>
-    </div>
-    <div style="margin-top:10px"><canvas id="barCompare" height="180"></canvas></div>
-    <div id="hints" style="margin-top:8px"></div>
-  </div>
-
-  <!-- Detailbericht -->
-  <div class="panel" style="margin-top:12px">
-    <h2>Detailbericht</h2>
-    <div id="report"></div>
-    <div class="footnote">Hinweis: Leistungen auf Enthalpiedifferenzen (kJ/kg) basierend; Massenströme aus Volumenstrom·Dichte. WRG standardmäßig ohne Stoffübertrag (x), optional mit Feuchteübertragung η<sub>x</sub>.</div>
-  </div>
-</div>
-
-<script>
-/* =========================
-   Hilfen: Parsing & Validierung
-   ========================= */
-function num(v, def=0){
-  if (v===undefined || v===null) return def;
-  if (typeof v === "number") return v;
-  const t = String(v).replace(",", ".").trim();
-  const n = parseFloat(t);
-  return Number.isFinite(n) ? n : def;
-}
-function clamp(v, min, max){ return Math.min(max, Math.max(min, v)); }
-function pctToDec(p){ return num(p)/100; }
-function decToPct(d){ return d*100; }
-
-/* =========================
-   Psychrometrie (kJ/kg, kg/kg)
-   ========================= */
-const P_STD = 101325; // Pa
-function psat_Pa(T_C){
-  // Tetens (Magnus) – solide für HLK (−40 … +60 °C)
-  const a=17.625, b=243.04;
-  const pws_kPa = 0.61094 * Math.exp((a*T_C)/(T_C+b));
-  return pws_kPa * 1000; // Pa
-}
-function x_from_T_RH(T_C, RH_percent, pPa=P_STD){
-  const pws = psat_Pa(T_C);
-  const pw  = Math.min((num(RH_percent)/100)*pws, 0.999*pPa);
-  return 0.62198 * pw / (pPa - pw); // kg/kg
-}
-function RH_from_T_x(T_C, x, pPa=P_STD){
-  const pws = psat_Pa(T_C);
-  const pw = (x * pPa) / (0.62198 + x);
-  return clamp(100 * pw / pws, 0, 100);
-}
-function x_from_gpkg(gpkg){ return num(gpkg)/1000; }
-function gpkg_from_x(x){ return x*1000; }
-function h_kJ_per_kg(T_C, x){
-  return 1.006*T_C + x*(2501 + 1.86*T_C);
-}
-function rho_moist_air(T_C, x, pPa=P_STD){
-  const T_K = T_C + 273.15;
-  const R_da = 287.058;
-  return pPa / (R_da * T_K * (1 + 1.6078*x));
-}
-function normalizeState(T_C, humVal, humMode, pPa=P_STD){
-  const x = (humMode === "%rF") ? x_from_T_RH(T_C, humVal, pPa) : x_from_gpkg(humVal);
-  const h = h_kJ_per_kg(T_C, x);
-  const RH = RH_from_T_x(T_C, x, pPa);
-  const gpkg = gpkg_from_x(x);
-  return { T_C, x, h, RH, gpkg };
-}
-
-/* =========================
-   WRG – Temperatur / optional x-Übertrag
-   ========================= */
-function afterWRG_T(T_out, T_exh, etaWRG, mode){ // mode: "heating"|"cooling"
-  return (mode==="heating")
-    ? (T_out + etaWRG * (T_exh - T_out))
-    : (T_out - etaWRG * (T_out - T_exh));
-}
-function afterWRG_x(x_out, x_exh, etaX){ // etaX=0 … 1
-  return x_out + etaX * (x_exh - x_out);
-}
-
-/* =========================
-   Wochenplaner (30-Minuten Raster)
-   state: 0=Aus, 1=Absenk, 2=Normal
-   ========================= */
-const plannerEl = document.getElementById("planner");
-const paintSel = document.getElementById("paintMode");
-let painting = false, paintValue = 2;
-paintSel.addEventListener("change", ()=> paintValue = Number(paintSel.value));
-
-const DAYS = ["Mo","Di","Mi","Do","Fr","Sa","So"];
-const plannerState = Array.from({length:7}, _=> Array(48).fill(0)); // Woche
-
-function buildPlanner(){
-  plannerEl.innerHTML = "";
-  // linke Spalte: Uhrzeiten
-  const timesCol = document.createElement("div");
-  timesCol.style.display="grid"; timesCol.style.gridTemplateRows="repeat(48,12px)";
-  timesCol.style.gap="2px"; timesCol.style.justifyItems="end";
-  for(let i=0;i<48;i++){
-    const t = document.createElement("div"); t.style.fontSize="10px"; t.style.color="#9aa4b2";
-    if(i%2===0){ t.textContent = String(i/2).padStart(2,"0")+":00"; } else { t.textContent=""; }
-    timesCol.appendChild(t);
-  }
-  plannerEl.appendChild(timesCol);
-  // 7 Tages-Spalten
-  for(let d=0; d<7; d++){
-    const col = document.createElement("div"); col.className="daycol";
-    const head = document.createElement("div");
-    head.style.gridRow="1"; head.style.marginBottom="2px"; head.style.position="sticky";
-    head.style.top="0"; // (optisch)
-    col.dataset.day = d;
-    for(let s=0;s<48;s++){
-      const cell = document.createElement("div");
-      cell.className="cell"; cell.dataset.state = plannerState[d][s];
-      cell.dataset.d = d; cell.dataset.s = s;
-      cell.addEventListener("mousedown", (e)=>{ painting=true; setCell(d,s,paintValue); e.preventDefault();});
-      cell.addEventListener("mouseover", ()=>{ if(painting) setCell(d,s,paintValue); });
-      col.appendChild(cell);
-    }
-    plannerEl.appendChild(col);
-  }
-}
-function setCell(d,s,val){
-  plannerState[d][s] = val;
-  const sel = `.daycol:nth-child(${d+2}) .cell:nth-child(${s+1})`; // +2 wegen Zeitspalte
-  const ce = plannerEl.querySelector(sel);
-  if(ce) ce.dataset.state = val;
-  scheduleChanged();
-}
-document.addEventListener("mouseup", ()=> painting=false);
-
-document.getElementById("btnFillNB").addEventListener("click", ()=>{
-  for(let d=0; d<5; d++){ // Mo–Fr 8–18 NB, Rest AUS
-    for(let s=0;s<48;s++){
-      const hour = s/2;
-      plannerState[d][s] = (hour>=8 && hour<18) ? 2 : 0;
-    }
-  }
-  for(let d=5; d<7; d++){
-    for(let s=0;s<48;s++){ plannerState[d][s]=0; }
-  }
-  buildPlanner(); scheduleChanged();
-});
-document.getElementById("btnClear").addEventListener("click", ()=>{
-  for(let d=0; d<7; d++) for(let s=0; s<48; s++) plannerState[d][s]=0;
-  buildPlanner(); scheduleChanged();
-});
-buildPlanner();
-
-function weeklyHours(){
-  let nb=0, ab=0, off=0;
-  for(let d=0; d<7; d++){
-    for(let s=0; s<48; s++){
-      if(plannerState[d][s]===2) nb += 0.5;
-      else if(plannerState[d][s]===1) ab += 0.5;
-      else off += 0.5;
-    }
-  }
-  return {nb, ab, off};
-}
-function annualHours(){
-  const w = weeklyHours();
-  const extraNB = num(document.getElementById("extraNB").value,0);
-  const extraAB = num(document.getElementById("extraAB").value,0);
-  return {
-    NB_h_per_a: w.nb*52 + extraNB,
-    AB_h_per_a: w.ab*52 + extraAB,
-    OFF_h_per_a: w.off*52
-  };
-}
-
-/* =========================
-   Szenario-Formular (Web Component)
-   ========================= */
-class ScenarioForm extends HTMLElement{
-  connectedCallback(){
-    const id=this.getAttribute("id")||"scn";
-    this.innerHTML = this.template(id);
-    this.bind(id);
-  }
-  template(id){
-    return `
-    <div class="row">
-      <label>Anlagenmodus
-        <select id="${id}_mode">
-          <option value="temp_only">Nur Temperaturführung (Heizen/Kühlen)</option>
-          <option value="cool_dehum">Kühlen und Entfeuchten</option>
-          <option value="heat_humid">Heizen und Befeuchten</option>
-        </select>
-      </label>
-      <label>WRG-Wirkungsgrad η<sub>WRG</sub> [%]
-        <input type="number" id="${id}_etaWRG" min="0" max="100" step="0.5" value="70">
-      </label>
-      <label>WRG-Feuchteübertrag η<sub>x</sub> [%] <small class="muted">(optional, z. B. Rotor)</small>
-        <input type="number" id="${id}_etaX" min="0" max="100" step="1" value="0">
-      </label>
-      <label>Dichte
-        <select id="${id}_rhoMode">
-          <option value="fixed">fix 1,2 kg/m³</option>
-          <option value="calc">berechnet (genauer)</option>
-        </select>
-      </label>
-    </div>
-    <div class="row">
-      <label>Zuluftvolumenstrom Normalbetrieb [m³/h]
-        <input type="number" id="${id}_V_NB" min="0" max="500000" step="100" value="30000" required>
-      </label>
-      <label>Zuluftvolumenstrom Absenkbetrieb [m³/h]
-        <input type="number" id="${id}_V_AB" min="0" max="500000" step="100" value="15000" required>
-      </label>
-      <label>Gesamtdruckverlust Δp [Pa]
-        <input type="number" id="${id}_dp" min="0" max="4000" step="10" value="800" required>
-      </label>
-      <label>η Ventilator [%]
-        <input type="number" id="${id}_etaFan" min="0" max="100" step="0.5" value="65" required>
-      </label>
-      <label>η Motor [%]
-        <input type="number" id="${id}_etaMot" min="0" max="100" step="0.5" value="95" required>
-      </label>
-    </div>
-
-    <h3>Klimazustände</h3>
-    <div class="row">
-      ${this.statePoint(id,"OUT_H","Außenluft (Heizperiode)", -5, 80, "%rF")}
-      ${this.statePoint(id,"OUT_C","Außenluft (Kühlperiode)", 30, 50, "%rF")}
-    </div>
-    <div class="row">
-      ${this.statePoint(id,"ROOM","Raum/Abluft Soll", 22, 50, "%rF")}
-    </div>
-    <div class="row">
-      ${this.statePoint(id,"SUP_NB","Zuluft Soll (Normalbetrieb)", 20, 45, "%rF")}
-      ${this.statePoint(id,"SUP_AB","Zuluft Soll (Absenkbetrieb)", 17, 50, "%rF")}
-    </div>
-    `;
-  }
-  statePoint(id,key,label,t0=20,hum0=50,mode0="%rF"){
-    const uid = `${id}_${key}`;
-    return `
-    <fieldset style="border:1px solid #1f2937; border-radius:10px; padding:8px; min-width:280px">
-      <legend class="muted">${label}</legend>
-      <div class="row">
-        <label>Temperatur [°C]
-          <input type="number" id="${uid}_T" min="-40" max="60" step="0.5" value="${t0}">
-        </label>
-        <label>Feuchte
-          <div class="field-inline">
-            <input type="number" id="${uid}_H" step="0.1" value="${hum0}">
-            <select id="${uid}_Hmode">
-              <option value="%rF" ${mode0==="%rF"?"selected":""}>% r.F.</option>
-              <option value="g_per_kg" ${mode0==="g_per_kg"?"selected":""}>g/kg</option>
-            </select>
-          </div>
-        </label>
+    <div class="section" ondrop="dropPicto(event,this)" ondragover="allowDrop(event)">
+      <h2>2. Gefahren für Mensch und Umwelt</h2>
+      <div class="content">
+        <div class="picto-dropzone" id="pictos2"></div>
+        <div class="text"><textarea id="text2" class="bullet-text" oninput="formatBullets(this)" placeholder="• "></textarea></div>
       </div>
-      <div class="footnote" id="${uid}_info">–</div>
-    </fieldset>
-    `;
-  }
-  bind(id){
-    this.querySelectorAll("input,select").forEach(el=>{
-      el.addEventListener("input", ()=>{ updateAll(); });
-      el.addEventListener("change", ()=>{ updateAll(); });
-    });
-  }
-}
-customElements.define("ScenarioForm", ScenarioForm);
+    </div>
 
-/* =========================
-   Berechnungen Szenario
-   ========================= */
-function readScenario(id){
-  const g = (sel)=> document.getElementById(`${id}_${sel}`);
+    <div class="section" ondrop="dropPicto(event,this)" ondragover="allowDrop(event)">
+      <h2>3. Schutzmaßnahmen und Verhaltensregeln</h2>
+      <div class="content">
+        <div class="picto-dropzone" id="pictos3"></div>
+        <div class="text"><textarea id="text3" class="bullet-text" oninput="formatBullets(this)" placeholder="• "></textarea></div>
+      </div>
+    </div>
 
-  const mode = g("mode").value; // "temp_only"|"cool_dehum"|"heat_humid"
-  const etaWRG = clamp(num(g("etaWRG").value)/100, 0, 1);
-  const etaX   = clamp(num(g("etaX").value)/100, 0, 1);
-  const rhoMode = g("rhoMode").value;
+    <div class="section" ondrop="dropPicto(event,this)" ondragover="allowDrop(event)">
+      <h2>4. Verhalten bei Störungen / Gefahrfall</h2>
+      <div class="content">
+        <div class="picto-dropzone" id="pictos4"></div>
+        <div class="text"><textarea id="text4" class="bullet-text" oninput="formatBullets(this)" placeholder="• "></textarea></div>
+      </div>
+    </div>
 
-  const Vdot_NB = clamp(num(g("V_NB").value), 0, 500000);
-  const Vdot_AB = clamp(num(g("V_AB").value), 0, 500000);
-  const dp      = clamp(num(g("dp").value), 0, 4000);
-  const etaFan  = clamp(num(g("etaFan").value)/100, 0.0001, 1);
-  const etaMot  = clamp(num(g("etaMot").value)/100, 0.0001, 1);
+    <div class="section" ondrop="dropPicto(event,this)" ondragover="allowDrop(event)">
+      <h2>5. Erste Hilfe</h2>
+      <div class="content">
+        <div class="picto-dropzone" id="pictos5"></div>
+        <div class="text"><textarea id="text5" class="bullet-text" oninput="formatBullets(this)" placeholder="• "></textarea></div>
+      </div>
+    </div>
 
-  // Zustandspunkte
-  function S(key){
-    const T = num(g(`${key}_T`).value);
-    const H = num(g(`${key}_H`).value);
-    const Hm = g(`${key}_Hmode`).value;
-    const st = normalizeState(T, H, Hm);
-    const info = document.getElementById(`${id}_${key}_info`);
-    info.textContent = `x = ${st.gpkg.toFixed(2)} g/kg • φ = ${st.RH.toFixed(1)} % • h = ${st.h.toFixed(1)} kJ/kg`;
-    return {T_C: T, humidityValue:H, humidityMode: Hm, x: st.x, h: st.h, RH: st.RH, gpkg: st.gpkg };
-  }
-  const OUT_H = S("OUT_H");
-  const OUT_C = S("OUT_C");
-  const ROOM  = S("ROOM");
-  const SUP_NB= S("SUP_NB");
-  const SUP_AB= S("SUP_AB");
+    <div class="section" ondrop="dropPicto(event,this)" ondragover="allowDrop(event)">
+      <h2>6. Instandhaltung / Entsorgung</h2>
+      <div class="content">
+        <div class="picto-dropzone" id="pictos6"></div>
+        <div class="text"><textarea id="text6" class="bullet-text" oninput="formatBullets(this)" placeholder="• "></textarea></div>
+      </div>
+    </div>
 
-  return {
-    mode, fan:{Vdot_NB, Vdot_AB, deltaP: dp, etaFan, etaMot, etaWRG, etaX, rhoMode},
-    OUT_H, OUT_C, ROOM, SUP_NB, SUP_AB
-  };
-}
+    <div class="footer">
+      <span>Datum: <input type="date" id="datum"></span>
+      <span>Unterschrift Verantwortliche/r: ___________________</span>
+    </div>
+  </div>
 
-function scenarioAnnualResult(scn, sched, hHeat, hCool, prices, eerOpt){
-  // WRG-Austritt (T) Heiz-/Kühlperiode
-  const T_wrg_H = afterWRG_T(scn.OUT_H.T_C, scn.ROOM.T_C, scn.fan.etaWRG, "heating");
-  const T_wrg_C = afterWRG_T(scn.OUT_C.T_C, scn.ROOM.T_C, scn.fan.etaWRG, "cooling");
+  <div class="export-buttons">
+    <button style="background:#444" onclick="exportPDF()">📥 Export als PDF</button>
+    <button style="background:#666" onclick="exportDOCX()">📥 Export als DOCX</button>
+    <button style="background:#006400" onclick="saveBA()">💾 Speichern</button>
+    <button style="background:#8B0000" onclick="loadBA()">📂 Laden</button>
+  </div>
 
-  // x nach WRG (optional mit Feuchteübertrag)
-  const x_wrg_H = afterWRG_x(scn.OUT_H.x, scn.ROOM.x, scn.fan.etaX);
-  const x_wrg_C = afterWRG_x(scn.OUT_C.x, scn.ROOM.x, scn.fan.etaX);
+  <input type="file" id="pictoupload" multiple accept="image/*" onchange="previewPictos(event)" style="margin:20px;">
+  <div id="pictoPreview"><p>Ziehen Sie die hochgeladenen Piktogramme in die Abschnitte.</p></div>
 
-  const h_wrg_H = h_kJ_per_kg(T_wrg_H, x_wrg_H);
-  const h_wrg_C = h_kJ_per_kg(T_wrg_C, x_wrg_C);
+  <script src="https://cdn.jsdelivr.net/npm/docx@8.0.0/build/index.js"></script>
+  <script>
+    function setBA(grundlage, nummer, haupt, neben) {
+      document.documentElement.style.setProperty('--hauptfarbe', haupt);
+      document.documentElement.style.setProperty('--nebenfarbe', neben);
+      document.getElementById('rechtsgrundlage').innerText = 'gem. ' + grundlage;
+      document.getElementById('banummer').value = nummer;
+    }
+    function autoResize(el) {
+      el.style.height = 'auto';
+      el.style.height = (el.scrollHeight) + 'px';
+    }
+    function formatBullets(el) {
+      let lines = el.value.split(/\\n/);
+      for (let i = 0; i < lines.length; i++) {
+        if (lines[i].trim() !== '' && !lines[i].trim().startsWith('•')) {
+          lines[i] = '• ' + lines[i].trim();
+        }
+        if (lines[i].trim() === '•') {
+          lines[i] = ''; // entfernt einzelne Punkte auf leeren Zeilen
+        }
+      }
+      el.value = lines.join('\\n');
+      autoResize(el);
+    }
+    function previewPictos(event) {
+      const preview = document.getElementById('pictoPreview');
+      preview.innerHTML = '';
+      Array.from(event.target.files).forEach(file => {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+          const img = document.createElement('img');
+          img.src = e.target.result;
+          img.draggable = true;
+          img.ondragstart = function(ev) { ev.dataTransfer.setData('text/plain', e.target.result); };
+          preview.appendChild(img);
+        }
+        reader.readAsDataURL(file);
+      });
+    }
+    function allowDrop(ev) { ev.preventDefault(); }
+    function dropPicto(ev, section) {
+      ev.preventDefault();
+      const data = ev.dataTransfer.getData('text/plain');
+      if (data) {
+        const wrapper = document.createElement('div');
+        wrapper.style.position = 'relative';
 
-  // Dichten
-  const rhoNB = (scn.fan.rhoMode==="calc") ? rho_moist_air(scn.SUP_NB.T_C, scn.SUP_NB.x) : 1.2;
-  const rhoAB = (scn.fan.rhoMode==="calc") ? rho_moist_air(scn.SUP_AB.T_C, scn.SUP_AB.x) : 1.2;
+        const img = document.createElement('img');
+        img.src = data;
+        img.draggable = true;
+        img.ondragstart = function(ev) { ev.dataTransfer.setData('text/plain', img.src); };
 
-  // Massenströme [kg/s]
-  const mdot_NB = (scn.fan.Vdot_NB * rhoNB) / 3600.0;
-  const mdot_AB = (scn.fan.Vdot_AB * rhoAB) / 3600.0;
+        const controls = document.createElement('div');
+        controls.className = 'picto-controls';
+        const delBtn = document.createElement('button');
+        delBtn.textContent = 'Löschen';
+        delBtn.onclick = () => wrapper.remove();
+        controls.appendChild(delBtn);
 
-  // Thermische Leistungen [kW]
-  const Pth_NB_H = mdot_NB * Math.abs(scn.SUP_NB.h - h_wrg_H);
-  const Pth_NB_C = mdot_NB * Math.abs(scn.SUP_NB.h - h_wrg_C);
-  const Pth_AB_H = mdot_AB * Math.abs(scn.SUP_AB.h - h_wrg_H);
-  const Pth_AB_C = mdot_AB * Math.abs(scn.SUP_AB.h - h_wrg_C);
+        wrapper.appendChild(img);
+        wrapper.appendChild(controls);
 
-  // Ventilatorleistung [kW]
-  const Pvent_NB = (scn.fan.Vdot_NB * scn.fan.deltaP) / (scn.fan.etaFan * scn.fan.etaMot * 3600 * 1000);
-  const Pvent_AB = (scn.fan.Vdot_AB * scn.fan.deltaP) / (scn.fan.etaFan * scn.fan.etaMot * 3600 * 1000);
-
-  // Jahresstunden
-  const h_NB = sched.NB_h_per_a, h_AB = sched.AB_h_per_a;
-
-  // Heiz/Kühl-Anteile
-  hHeat = Math.max(0, hHeat||0); hCool = Math.max(0, hCool||0);
-  const shareHeat = (hHeat + hCool) > 0 ? (hHeat / (hHeat + hCool)) : 0.5;
-  const h_NB_H = h_NB * shareHeat, h_NB_C = h_NB * (1-shareHeat);
-  const h_AB_H = h_AB * shareHeat, h_AB_C = h_AB * (1-shareHeat);
-
-  // Energien [kWh/a]
-  const Eth_heat = Pth_NB_H*h_NB_H + Pth_AB_H*h_AB_H;
-  const Eth_cold = Pth_NB_C*h_NB_C + Pth_AB_C*h_AB_C;
-  const Eel_vent = Pvent_NB*h_NB + Pvent_AB*h_AB;
-
-  // Kosten
-  let K_heat = Eth_heat * prices.heat;
-  let K_cold;
-  if (eerOpt > 0){
-    const E_el_for_cold = Eth_cold / eerOpt;
-    K_cold = E_el_for_cold * prices.el;
-  } else {
-    K_cold = Eth_cold * prices.cold;
-  }
-  const K_el = Eel_vent * prices.el;
-  const total = K_heat + K_cold + K_el;
-
-  // Kosten/h (Referenz = NB Lasten)
-  const K_per_h_heat = Pth_NB_H * prices.heat;
-  const K_per_h_cold = (eerOpt>0) ? (Pth_NB_C/ eerOpt) * prices.el : Pth_NB_C * prices.cold;
-  const K_per_h_vent = Pvent_NB * prices.el;
-
-  // Plausibilitäts-Hinweise
-  const hints=[];
-  if (scn.SUP_NB.RH>65) hints.push("Zuluft (NB) relative Feuchte &gt; 65 % – Kondensations-/Komfortprüfung empfohlen.");
-  if (scn.SUP_NB.RH<20) hints.push("Zuluft (NB) relative Feuchte &lt; 20 % – mögliche Überbefeuchtung prüfen (falls Befeuchten aktiv).");
-  if (scn.fan.Vdot_NB>400000 && scn.fan.deltaP>1500) hints.push("Sehr hoher Volumenstrom und Druckverlust – Ventilatorkennlinie/Schall prüfen.");
-  if (scn.fan.etaFan<0.5) hints.push("Ventilatorwirkungsgrad &lt; 50 % – Effizienzpotenzial prüfen.");
-  if (Math.abs(scn.SUP_NB.h - h_wrg_H) < 3 && Math.abs(scn.SUP_NB.h - h_wrg_C) < 3)
-      hints.push("WRG deckt Großteil der Last – Nachheiz-/Nachtkühlbedarf gering.");
-
-  return {
-    points:{T_wrg_H, T_wrg_C, x_wrg_H, x_wrg_C, h_wrg_H, h_wrg_C},
-    power:{thermal:{NB_H:Pth_NB_H, NB_C:Pth_NB_C, AB_H:Pth_AB_H, AB_C:Pth_AB_C}, fan:{NB:Pvent_NB, AB:Pvent_AB}},
-    energy:{thermal_heat:Eth_heat, thermal_cold:Eth_cold, fan_el:Eel_vent},
-    costs:{heat:K_heat, cold:K_cold, el:K_el, total},
-    cost_per_h:{heat:K_per_h_heat, cold:K_per_h_cold, vent:K_per_h_vent},
-    shares:{heat:shareHeat, cool:1-shareHeat},
-    hints
-  };
-}
-
-function compareScenarios(base, opt){
-  function diff(a,b){ return b-a; }
-  return {
-    base, opt,
-    diff:{
-      costs:{
-        heat: diff(base.costs.heat, opt.costs.heat),
-        cold: diff(base.costs.cold, opt.costs.cold),
-        el:   diff(base.costs.el,   opt.costs.el),
-        total:diff(base.costs.total,opt.costs.total),
-      },
-      energy:{
-        thermal_heat: diff(base.energy.thermal_heat, opt.energy.thermal_heat),
-        thermal_cold: diff(base.energy.thermal_cold, opt.energy.thermal_cold),
-        fan_el:       diff(base.energy.fan_el,       opt.energy.fan_el),
+        section.querySelector('.picto-dropzone').appendChild(wrapper);
       }
     }
-  };
-}
 
-/* =========================
-   UI: Lesen, Rechnen, Rendern
-   ========================= */
-const charts = {pieBase:null, pieOpt:null, bar:null};
+    function exportPDF() {
+      const element = document.getElementById('baPage');
+      const opt = { margin: 0.5, filename: document.getElementById('banummer').value + '.pdf', image: { type: 'jpeg', quality: 0.98 }, html2canvas: { scale: 2 }, jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' } };
+      html2pdf().from(element).set(opt).save();
+    }
 
-function scheduleChanged(){ updateAll(); }
-
-function updateAll(){
-  const sched = annualHours();
-  const hHeat = num(document.getElementById("hHeat").value,0);
-  const hCool = num(document.getElementById("hCool").value,0);
-  const prices = {
-    heat: num(document.getElementById("cHeat").value,0),
-    cold: num(document.getElementById("cCold").value,0),
-    el:   num(document.getElementById("cEl").value,0),
-  };
-  const eerOpt = num(document.getElementById("eer").value,0);
-
-  const A_in = readScenario("base");
-  const B_in = readScenario("opt");
-
-  const A = scenarioAnnualResult(A_in, sched, hHeat, hCool, prices, eerOpt);
-  const B = scenarioAnnualResult(B_in, sched, hHeat, hCool, prices, eerOpt);
-  const C = compareScenarios(A,B);
-
-  // KPIs
-  setText("kBase", euro(A.costs.total));
-  setText("kOpt",  euro(B.costs.total));
-  const savingAbs = A.costs.total - B.costs.total;
-  setText("kSaveAbs", euro(savingAbs));
-  const savingRel = A.costs.total>0 ? (1 - B.costs.total/A.costs.total)*100 : 0;
-  setText("kSaveRel", savingRel.toFixed(1).replace(".",",")+" %");
-
-  // Diagramme
-  renderPies(A,B);
-  renderBars(A,B);
-
-  // Hinweise
-  renderHints([...A.hints, ...B.hints]);
-
-  // Bericht
-  renderReport(A,B,C,sched,hHeat,hCool);
-}
-
-function euro(v){ return (v||0).toLocaleString("de-DE",{minimumFractionDigits:0, maximumFractionDigits:0})+" €"; }
-function kwh(v){ return (v||0).toLocaleString("de-DE",{minimumFractionDigits:0, maximumFractionDigits:0})+" kWh/a"; }
-function powerKW(v){ return (v||0).toLocaleString("de-DE",{minimumFractionDigits:1, maximumFractionDigits:1})+" kW"; }
-function setText(id, txt){ const el=document.getElementById(id); if(el) el.textContent = txt; }
-
-function renderPies(A,B){
-  const dataA=[A.costs.heat, A.costs.cold, A.costs.el];
-  const dataB=[B.costs.heat, B.costs.cold, B.costs.el];
-  const labels=["Heizen €","Kühlen €","Ventilator-Strom €"];
-  charts.pieBase?.destroy();
-  charts.pieOpt?.destroy();
-  charts.pieBase = new Chart(document.getElementById("pieBase").getContext("2d"), {
-    type:"pie",
-    data:{labels, datasets:[{data:dataA}]}, options:{plugins:{legend:{labels:{color:"#e5e7eb"}}}}
-  });
-  charts.pieOpt = new Chart(document.getElementById("pieOpt").getContext("2d"), {
-    type:"pie",
-    data:{labels, datasets:[{data:dataB}]}, options:{plugins:{legend:{labels:{color:"#e5e7eb"}}}}
-  });
-}
-function renderBars(A,B){
-  const labels=["Heizen","Kühlen","Ventilator-Strom","Gesamt"];
-  const base=[A.costs.heat, A.costs.cold, A.costs.el, A.costs.total];
-  const opt =[B.costs.heat, B.costs.cold, B.costs.el, B.costs.total];
-  charts.bar?.destroy();
-  charts.bar = new Chart(document.getElementById("barCompare").getContext("2d"), {
-    type:"bar",
-    data:{labels, datasets:[
-      {label:"Basis €", data:base},
-      {label:"Optimierung €", data:opt}
-    ]},
-    options:{plugins:{legend:{labels:{color:"#e5e7eb"}}}, scales:{x:{ticks:{color:"#cbd5e1"}}, y:{ticks:{color:"#cbd5e1"}}}}
-  });
-}
-function renderHints(list){
-  const el = document.getElementById("hints");
-  if(!list.length){ el.innerHTML = "<small class='muted'>Keine Auffälligkeiten aus den Plausibilitätsprüfungen.</small>"; return; }
-  el.innerHTML = "<ul>"+ list.map(h=>`<li class="hl">${h}</li>`).join("") +"</ul>";
-}
-
-function renderReport(A,B,C,sched,hHeat,hCool){
-  const html = `
-  <div class="cols-2 grid">
-    <div>
-      <h3>Leistungen (Normalbetrieb)</h3>
-      <table>
-        <tr><th>Größe</th><th>Basis</th><th>Optimierung</th><th>Diff (Opt−Basis)</th></tr>
-        <tr><td>Thermisch – Heizen</td><td>${powerKW(A.power.thermal.NB_H)}</td><td>${powerKW(B.power.thermal.NB_H)}</td><td>${powerKW(B.power.thermal.NB_H-A.power.thermal.NB_H)}</td></tr>
-        <tr><td>Thermisch – Kühlen</td><td>${powerKW(A.power.thermal.NB_C)}</td><td>${powerKW(B.power.thermal.NB_C)}</td><td>${powerKW(B.power.thermal.NB_C-A.power.thermal.NB_C)}</td></tr>
-        <tr><td>Ventilator</td><td>${powerKW(A.power.fan.NB)}</td><td>${powerKW(B.power.fan.NB)}</td><td>${powerKW(B.power.fan.NB-A.power.fan.NB)}</td></tr>
-      </table>
-      <h3>Kosten pro Stunde (NB)</h3>
-      <table>
-        <tr><th>Größe</th><th>Basis</th><th>Optimierung</th><th>Diff</th></tr>
-        <tr><td>Heizen</td><td>${A.cost_per_h.heat.toFixed(2)} €</td><td>${B.cost_per_h.heat.toFixed(2)} €</td><td>${(B.cost_per_h.heat-A.cost_per_h.heat).toFixed(2)} €</td></tr>
-        <tr><td>Kühlen</td><td>${A.cost_per_h.cold.toFixed(2)} €</td><td>${B.cost_per_h.cold.toFixed(2)} €</td><td>${(B.cost_per_h.cold-A.cost_per_h.cold).toFixed(2)} €</td></tr>
-        <tr><td>Ventilator-Strom</td><td>${A.cost_per_h.vent.toFixed(2)} €</td><td>${B.cost_per_h.vent.toFixed(2)} €</td><td>${(B.cost_per_h.vent-A.cost_per_h.vent).toFixed(2)} €</td></tr>
-      </table>
-    </div>
-    <div>
-      <h3>Jahresenergie (kWh/a)</h3>
-      <table>
-        <tr><th>Größe</th><th>Basis</th><th>Optimierung</th><th>Diff (Opt−Basis)</th></tr>
-        <tr><td>Thermisch – Heizen</td><td>${kwh(A.energy.thermal_heat)}</td><td>${kwh(B.energy.thermal_heat)}</td><td>${kwh(B.energy.thermal_heat-A.energy.thermal_heat)}</td></tr>
-        <tr><td>Thermisch – Kühlen</td><td>${kwh(A.energy.thermal_cold)}</td><td>${kwh(B.energy.thermal_cold)}</td><td>${kwh(B.energy.thermal_cold-A.energy.thermal_cold)}</td></tr>
-        <tr><td>Ventilator-Strom</td><td>${kwh(A.energy.fan_el)}</td><td>${kwh(B.energy.fan_el)}</td><td>${kwh(B.energy.fan_el-A.energy.fan_el)}</td></tr>
-      </table>
-      <h3>Jahreskosten (€/a)</h3>
-      <table>
-        <tr><th>Größe</th><th>Basis</th><th>Optimierung</th><th>Diff (Opt−Basis)</th></tr>
-        <tr><td>Heizen</td><td>${euro(A.costs.heat)}</td><td>${euro(B.costs.heat)}</td><td>${euro(B.costs.heat-A.costs.heat)}</td></tr>
-        <tr><td>Kühlen</td><td>${euro(A.costs.cold)}</td><td>${euro(B.costs.cold)}</td><td>${euro(B.costs.cold-A.costs.cold)}</td></tr>
-        <tr><td>Ventilator-Strom</td><td>${euro(A.costs.el)}</td><td>${euro(B.costs.el)}</td><td>${euro(B.costs.el-A.costs.el)}</td></tr>
-        <tr><th>Summe</th><th>${euro(A.costs.total)}</th><th>${euro(B.costs.total)}</th><th>${euro(B.costs.total-A.costs.total)}</th></tr>
-      </table>
-      <div class="footnote">Betriebsstunden/Jahr (aus Wochenplaner): NB ${sched.NB_h_per_a.toFixed(0)} h • AB ${sched.AB_h_per_a.toFixed(0)} h • AUS ${sched.OFF_h_per_a.toFixed(0)} h. Heiz/Kühl-Anteile: ${(A.shares.heat*100).toFixed(0)} % Heizen / ${(A.shares.cool*100).toFixed(0)} % Kühlen.</div>
-    </div>
-  </div>`;
-  document.getElementById("report").innerHTML = html;
-}
-
-/* Initial rechnen */
-updateAll();
-
-/* =========================
-   UX: Änderungen globaler Felder neu rechnen
-   ========================= */
-["extraNB","extraAB","hHeat","hCool","cHeat","cCold","cEl","eer"].forEach(id=>{
-  document.getElementById(id).addEventListener("input", updateAll);
-  document.getElementById(id).addEventListener("change", updateAll);
-});
-</script>
-</body>
-</html>
+    async function exportDOCX() {
+      const { Document, Packer, Paragraph, TextRun } = window.docx;
+      const doc = new Document({ sections: [{ properties: {}, children: [ new Paragraph({ children: [new TextRun({ text: \"Betriebsanweisung\", bold: true, size: 28 })]}), new Paragraph({ children: [new TextRun(\"Nummer: \" + document.getElementById('banummer').value)]}), ] }] });
+      const blob = await Packer.toBlob(doc);
+      const link = document.createElement(\"a\");\n      link.href = URL.createObjectURL(blob);\n      link.download = document.getElementById('banummer').value + \".docx\";\n      link.click();\n    }\n\n    function saveBA() {\n      const data = {\n        firma: document.getElementById('firma').value,\n        banummer: document.getElementById('banummer').value,\n        bereich: document.getElementById('bereich').value,\n        arbeitsplatz: document.getElementById('arbeitsplatz').value,\n        taetigkeit: document.getElementById('taetigkeit').value,\n        stand: document.getElementById('stand').value,\n        datum: document.getElementById('datum').value,\n        textfelder: [1,2,3,4,5,6].map(i => document.getElementById('text'+i).value),\n        pictos: [1,2,3,4,5,6].map(i => Array.from(document.querySelectorAll('#pictos'+i+' img')).map(img => img.src))\n      };\n      const blob = new Blob([JSON.stringify(data)], {type: \"application/json\"});\n      const link = document.createElement(\"a\");\n      link.href = URL.createObjectURL(blob);\n      link.download = data.banummer + \".json\";\n      link.click();\n    }\n\n    function loadBA() {\n      const input = document.createElement('input');\n      input.type = 'file';\n      input.accept = 'application/json';\n      input.onchange = e => {\n        const file = e.target.files[0];\n        const reader = new FileReader();\n        reader.onload = function(ev) {\n          const data = JSON.parse(ev.target.result);\n          document.getElementById('firma').value = data.firma;\n          document.getElementById('banummer').value = data.banummer;\n          document.getElementById('bereich').value = data.bereich;\n          document.getElementById('arbeitsplatz').value = data.arbeitsplatz;\n          document.getElementById('taetigkeit').value = data.taetigkeit;\n          document.getElementById('stand').value = data.stand;\n          document.getElementById('datum').value = data.datum;\n          data.textfelder.forEach((t,i) => document.getElementById('text'+(i+1)).value = t);\n          if(data.pictos){\n            data.pictos.forEach((arr,i)=>{\n              const zone=document.getElementById('pictos'+(i+1));\n              zone.innerHTML='';\n              arr.forEach(src=>{\n                const wrapper=document.createElement('div');\n                wrapper.style.position='relative';\n                const img=document.createElement('img');\n                img.src=src;\n                img.draggable=true;\n                img.ondragstart=function(ev){ev.dataTransfer.setData('text/plain', img.src);};\n                const controls=document.createElement('div');\n                controls.className='picto-controls';\n                const delBtn=document.createElement('button');\n                delBtn.textContent='Löschen';\n                delBtn.onclick=()=>wrapper.remove();\n                controls.appendChild(delBtn);\n\n                wrapper.appendChild(img);\n                wrapper.appendChild(controls);\n\n                zone.appendChild(wrapper);\n              });\n            });\n          }\n        }\n        reader.readAsText(file);\n      };\n      input.click();\n    }\n  </script>\n</body>\n</html>"}]}
