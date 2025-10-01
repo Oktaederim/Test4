@@ -4,29 +4,31 @@
   <meta charset="UTF-8">
   <title>Betriebsanweisung Generator</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.9.3/html2pdf.bundle.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/docx@8.0.0/build/index.js"></script>
   <style>
     body { font-family: Arial, sans-serif; margin: 0; padding: 0; background: #f5f5f5; }
-    .page { width: 210mm; min-height: 297mm; margin: 10px auto; background: white; padding: 20mm 10mm 20mm 10mm; box-shadow: 0 0 5px rgba(0,0,0,0.1); border: 4px solid var(--hauptfarbe, #005b99); }
 
-    .header { display: grid; grid-template-columns: 1fr 2fr 1fr; margin-bottom: 10px; border-bottom: 2px solid var(--hauptfarbe, #005b99); }
-    .header div { border-right: 2px solid var(--hauptfarbe, #005b99); padding: 6px; font-size: 10pt; background: #fff; }
+    /* Professionellerer Rahmen und Layout für DIN A4 */
+    .page { width: 210mm; min-height: 297mm; margin: 10px auto; background: white; padding: 20mm 10mm; box-shadow: 0 0 5px rgba(0,0,0,0.2); border: 6px solid var(--hauptfarbe, #005b99); position: relative; }
+
+    .header { display: grid; grid-template-columns: 1fr 2fr 1fr; margin-bottom: 10px; border-bottom: 3px solid var(--hauptfarbe, #005b99); }
+    .header div { border-right: 3px solid var(--hauptfarbe, #005b99); padding: 6px; font-size: 10pt; background: #fff; }
     .header div:last-child { border-right: none; }
     .header .title { text-align: center; font-weight: bold; }
 
-    .arbeitsangaben { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; font-size: 10pt; border-top: 2px solid var(--hauptfarbe, #005b99); border-bottom: 2px solid var(--hauptfarbe, #005b99); margin-bottom: 10px; }
-    .arbeitsangaben div { border-right: 2px solid var(--hauptfarbe, #005b99); padding: 6px; }
+    .arbeitsangaben { display: grid; grid-template-columns: repeat(4, 1fr); font-size: 10pt; border-top: 3px solid var(--hauptfarbe, #005b99); border-bottom: 3px solid var(--hauptfarbe, #005b99); margin-bottom: 10px; }
+    .arbeitsangaben div { border-right: 3px solid var(--hauptfarbe, #005b99); padding: 6px; }
     .arbeitsangaben div:last-child { border-right: none; }
 
-    .section { margin: 12px 0; border: 2px solid var(--hauptfarbe, #005b99); page-break-inside: avoid; }
-    .section h2 { margin: 0; background: var(--hauptfarbe, #005b99); color: white; padding: 4px; font-size: 11pt; }
+    .section { margin: 12px 0; border: 3px solid var(--hauptfarbe, #005b99); page-break-inside: avoid; }
+    .section h2 { margin: 0; background: var(--hauptfarbe, #005b99); color: white; padding: 6px; font-size: 11pt; width: 100%; box-sizing: border-box; }
     .section .content { display: flex; align-items: flex-start; padding: 6px; }
     .section .picto-dropzone { width: 70px; min-height: 100px; border-right: 2px dashed #ccc; padding: 5px; display: flex; flex-direction: column; align-items: center; }
     .section .picto-dropzone img { max-width: 60px; margin: 5px 0; cursor: move; }
     .section .text { flex: 1; padding-left: 10px; }
-    .section textarea { width: 100%; border: none; font-size: 10pt; padding: 0; box-sizing: border-box; resize: none; overflow-y: hidden; line-height: 1.4; white-space: pre-wrap; }
-    .section textarea.bullet-text { padding-left: 15px; text-indent: -10px; }
+    .section textarea { width: 100%; border: none; font-size: 10pt; padding: 0; resize: none; overflow-y: hidden; line-height: 1.4; white-space: pre-wrap; }
 
-    .footer { margin-top: 15px; border-top: 2px solid var(--hauptfarbe, #005b99); display: flex; justify-content: space-between; padding: 6px; font-size: 10pt; }
+    .footer { margin-top: 15px; border-top: 3px solid var(--hauptfarbe, #005b99); display: flex; justify-content: space-between; padding: 6px; font-size: 10pt; }
 
     .color-picker { margin: 10px auto; text-align: center; }
     .preset-buttons button, .export-buttons button { margin: 5px; padding: 5px 10px; border: none; cursor: pointer; font-size: 10pt; border-radius: 4px; color: white; }
@@ -34,6 +36,9 @@
     #pictoPreview img { max-width: 60px; margin: 5px; cursor: grab; border: 1px solid #ccc; padding: 2px; background: #fff; }
     .picto-controls { text-align: center; }
     .picto-controls button { font-size: 9pt; margin: 2px; }
+
+    /* Hinweis bei Überlänge */
+    .overflow-warning { color: red; font-weight: bold; text-align: center; margin: 10px; display: none; }
   </style>
 </head>
 <body>
@@ -48,83 +53,64 @@
 
   <div id="baPage" class="page">
     <div class="header">
-      <div>Firma: <input type="text" id="firma" placeholder="Firma" style="width:90%"></div>
+      <div>Firma: <input type="text" placeholder="Firma" style="width:90%"></div>
       <div class="title">BETRIEBSANWEISUNG <br><small id="rechtsgrundlage">gem. BetrSichV</small></div>
       <div>Nr.: <input id="banummer" type="text" value="BA-T-01" style="width:80%"></div>
     </div>
 
     <div class="arbeitsangaben">
-      <div>Bereich: <input id="bereich" type="text" placeholder="Bereich" style="width:90%"></div>
-      <div>Arbeitsplatz: <input id="arbeitsplatz" type="text" placeholder="Arbeitsplatz" style="width:90%"></div>
-      <div>Tätigkeit: <input id="taetigkeit" type="text" placeholder="Tätigkeit" style="width:90%"></div>
-      <div>Stand: <input id="stand" type="text" placeholder="Stand" style="width:90%"></div>
+      <div>Bereich: <input type="text" placeholder="Bereich" style="width:90%"></div>
+      <div>Arbeitsplatz: <input type="text" placeholder="Arbeitsplatz" style="width:90%"></div>
+      <div>Tätigkeit: <input type="text" placeholder="Tätigkeit" style="width:90%"></div>
+      <div>Stand: <input type="text" placeholder="Stand" style="width:90%"></div>
     </div>
 
     <div class="section" ondrop="dropPicto(event,this)" ondragover="allowDrop(event)">
       <h2>1. Anwendungsbereich</h2>
-      <div class="content">
-        <div class="picto-dropzone" id="pictos1"></div>
-        <div class="text"><textarea id="text1" class="bullet-text" oninput="formatBullets(this)" placeholder="• "></textarea></div>
-      </div>
+      <div class="content"><div class="picto-dropzone"></div><div class="text"><textarea oninput="checkPageLength(); formatBullets(this)" placeholder="• "></textarea></div></div>
     </div>
 
     <div class="section" ondrop="dropPicto(event,this)" ondragover="allowDrop(event)">
       <h2>2. Gefahren für Mensch und Umwelt</h2>
-      <div class="content">
-        <div class="picto-dropzone" id="pictos2"></div>
-        <div class="text"><textarea id="text2" class="bullet-text" oninput="formatBullets(this)" placeholder="• "></textarea></div>
-      </div>
+      <div class="content"><div class="picto-dropzone"></div><div class="text"><textarea oninput="checkPageLength(); formatBullets(this)" placeholder="• "></textarea></div></div>
     </div>
 
     <div class="section" ondrop="dropPicto(event,this)" ondragover="allowDrop(event)">
       <h2>3. Schutzmaßnahmen und Verhaltensregeln</h2>
-      <div class="content">
-        <div class="picto-dropzone" id="pictos3"></div>
-        <div class="text"><textarea id="text3" class="bullet-text" oninput="formatBullets(this)" placeholder="• "></textarea></div>
-      </div>
+      <div class="content"><div class="picto-dropzone"></div><div class="text"><textarea oninput="checkPageLength(); formatBullets(this)" placeholder="• "></textarea></div></div>
     </div>
 
     <div class="section" ondrop="dropPicto(event,this)" ondragover="allowDrop(event)">
       <h2>4. Verhalten bei Störungen / Gefahrfall</h2>
-      <div class="content">
-        <div class="picto-dropzone" id="pictos4"></div>
-        <div class="text"><textarea id="text4" class="bullet-text" oninput="formatBullets(this)" placeholder="• "></textarea></div>
-      </div>
+      <div class="content"><div class="picto-dropzone"></div><div class="text"><textarea oninput="checkPageLength(); formatBullets(this)" placeholder="• "></textarea></div></div>
     </div>
 
     <div class="section" ondrop="dropPicto(event,this)" ondragover="allowDrop(event)">
       <h2>5. Erste Hilfe</h2>
-      <div class="content">
-        <div class="picto-dropzone" id="pictos5"></div>
-        <div class="text"><textarea id="text5" class="bullet-text" oninput="formatBullets(this)" placeholder="• "></textarea></div>
-      </div>
+      <div class="content"><div class="picto-dropzone"></div><div class="text"><textarea oninput="checkPageLength(); formatBullets(this)" placeholder="• "></textarea></div></div>
     </div>
 
     <div class="section" ondrop="dropPicto(event,this)" ondragover="allowDrop(event)">
       <h2>6. Instandhaltung / Entsorgung</h2>
-      <div class="content">
-        <div class="picto-dropzone" id="pictos6"></div>
-        <div class="text"><textarea id="text6" class="bullet-text" oninput="formatBullets(this)" placeholder="• "></textarea></div>
-      </div>
+      <div class="content"><div class="picto-dropzone"></div><div class="text"><textarea oninput="checkPageLength(); formatBullets(this)" placeholder="• "></textarea></div></div>
     </div>
 
     <div class="footer">
-      <span>Datum: <input type="date" id="datum"></span>
+      <span>Datum: <input type="date"></span>
       <span>Unterschrift Verantwortliche/r: ___________________</span>
     </div>
   </div>
 
+  <div id="overflowWarning" class="overflow-warning">⚠️ Achtung: Inhalt überschreitet eine DIN A4 Seite! Bitte kürzen oder anpassen.</div>
+
   <div class="export-buttons">
     <button style="background:#444" onclick="exportPDF()">📥 Export als PDF</button>
     <button style="background:#666" onclick="exportDOCX()">📥 Export als DOCX</button>
-    <button style="background:#006400" onclick="saveBA()">💾 Speichern</button>
-    <button style="background:#8B0000" onclick="loadBA()">📂 Laden</button>
   </div>
 
   <input type="file" id="pictoupload" multiple accept="image/*" onchange="previewPictos(event)" style="margin:20px;">
   <div id="pictoPreview"><p>Ziehen Sie die hochgeladenen Piktogramme in die Abschnitte.</p></div>
 
-  <script src="https://cdn.jsdelivr.net/npm/docx@8.0.0/build/index.js"></script>
   <script>
     function setBA(grundlage, nummer, haupt, neben) {
       document.documentElement.style.setProperty('--hauptfarbe', haupt);
@@ -132,23 +118,24 @@
       document.getElementById('rechtsgrundlage').innerText = 'gem. ' + grundlage;
       document.getElementById('banummer').value = nummer;
     }
+
     function autoResize(el) {
       el.style.height = 'auto';
-      el.style.height = (el.scrollHeight) + 'px';
+      el.style.height = el.scrollHeight + 'px';
     }
+
     function formatBullets(el) {
-      let lines = el.value.split(/\\n/);
+      let lines = el.value.split(/\n/);
       for (let i = 0; i < lines.length; i++) {
         if (lines[i].trim() !== '' && !lines[i].trim().startsWith('•')) {
           lines[i] = '• ' + lines[i].trim();
         }
-        if (lines[i].trim() === '•') {
-          lines[i] = ''; // entfernt einzelne Punkte auf leeren Zeilen
-        }
+        if (lines[i].trim() === '•') { lines[i] = ''; }
       }
-      el.value = lines.join('\\n');
+      el.value = lines.join('\n');
       autoResize(el);
     }
+
     function previewPictos(event) {
       const preview = document.getElementById('pictoPreview');
       preview.innerHTML = '';
@@ -158,36 +145,44 @@
           const img = document.createElement('img');
           img.src = e.target.result;
           img.draggable = true;
-          img.ondragstart = function(ev) { ev.dataTransfer.setData('text/plain', e.target.result); };
+          img.ondragstart = ev => ev.dataTransfer.setData('text/plain', e.target.result);
           preview.appendChild(img);
         }
         reader.readAsDataURL(file);
       });
     }
+
     function allowDrop(ev) { ev.preventDefault(); }
+
     function dropPicto(ev, section) {
       ev.preventDefault();
       const data = ev.dataTransfer.getData('text/plain');
       if (data) {
         const wrapper = document.createElement('div');
         wrapper.style.position = 'relative';
-
         const img = document.createElement('img');
         img.src = data;
         img.draggable = true;
-        img.ondragstart = function(ev) { ev.dataTransfer.setData('text/plain', img.src); };
-
+        img.ondragstart = ev => ev.dataTransfer.setData('text/plain', img.src);
         const controls = document.createElement('div');
         controls.className = 'picto-controls';
         const delBtn = document.createElement('button');
         delBtn.textContent = 'Löschen';
         delBtn.onclick = () => wrapper.remove();
         controls.appendChild(delBtn);
-
         wrapper.appendChild(img);
         wrapper.appendChild(controls);
-
         section.querySelector('.picto-dropzone').appendChild(wrapper);
+      }
+    }
+
+    function checkPageLength() {
+      const page = document.getElementById('baPage');
+      const warning = document.getElementById('overflowWarning');
+      if (page.scrollHeight > page.offsetHeight) {
+        warning.style.display = 'block';
+      } else {
+        warning.style.display = 'none';
       }
     }
 
@@ -199,6 +194,16 @@
 
     async function exportDOCX() {
       const { Document, Packer, Paragraph, TextRun } = window.docx;
-      const doc = new Document({ sections: [{ properties: {}, children: [ new Paragraph({ children: [new TextRun({ text: \"Betriebsanweisung\", bold: true, size: 28 })]}), new Paragraph({ children: [new TextRun(\"Nummer: \" + document.getElementById('banummer').value)]}), ] }] });
+      const doc = new Document({ sections: [{ children: [
+        new Paragraph({ children: [new TextRun({ text: "Betriebsanweisung", bold: true, size: 28 })]}),
+        new Paragraph({ children: [new TextRun("Nummer: " + document.getElementById('banummer').value)]})
+      ] }] });
       const blob = await Packer.toBlob(doc);
-      const link = document.createElement(\"a\");\n      link.href = URL.createObjectURL(blob);\n      link.download = document.getElementById('banummer').value + \".docx\";\n      link.click();\n    }\n\n    function saveBA() {\n      const data = {\n        firma: document.getElementById('firma').value,\n        banummer: document.getElementById('banummer').value,\n        bereich: document.getElementById('bereich').value,\n        arbeitsplatz: document.getElementById('arbeitsplatz').value,\n        taetigkeit: document.getElementById('taetigkeit').value,\n        stand: document.getElementById('stand').value,\n        datum: document.getElementById('datum').value,\n        textfelder: [1,2,3,4,5,6].map(i => document.getElementById('text'+i).value),\n        pictos: [1,2,3,4,5,6].map(i => Array.from(document.querySelectorAll('#pictos'+i+' img')).map(img => img.src))\n      };\n      const blob = new Blob([JSON.stringify(data)], {type: \"application/json\"});\n      const link = document.createElement(\"a\");\n      link.href = URL.createObjectURL(blob);\n      link.download = data.banummer + \".json\";\n      link.click();\n    }\n\n    function loadBA() {\n      const input = document.createElement('input');\n      input.type = 'file';\n      input.accept = 'application/json';\n      input.onchange = e => {\n        const file = e.target.files[0];\n        const reader = new FileReader();\n        reader.onload = function(ev) {\n          const data = JSON.parse(ev.target.result);\n          document.getElementById('firma').value = data.firma;\n          document.getElementById('banummer').value = data.banummer;\n          document.getElementById('bereich').value = data.bereich;\n          document.getElementById('arbeitsplatz').value = data.arbeitsplatz;\n          document.getElementById('taetigkeit').value = data.taetigkeit;\n          document.getElementById('stand').value = data.stand;\n          document.getElementById('datum').value = data.datum;\n          data.textfelder.forEach((t,i) => document.getElementById('text'+(i+1)).value = t);\n          if(data.pictos){\n            data.pictos.forEach((arr,i)=>{\n              const zone=document.getElementById('pictos'+(i+1));\n              zone.innerHTML='';\n              arr.forEach(src=>{\n                const wrapper=document.createElement('div');\n                wrapper.style.position='relative';\n                const img=document.createElement('img');\n                img.src=src;\n                img.draggable=true;\n                img.ondragstart=function(ev){ev.dataTransfer.setData('text/plain', img.src);};\n                const controls=document.createElement('div');\n                controls.className='picto-controls';\n                const delBtn=document.createElement('button');\n                delBtn.textContent='Löschen';\n                delBtn.onclick=()=>wrapper.remove();\n                controls.appendChild(delBtn);\n\n                wrapper.appendChild(img);\n                wrapper.appendChild(controls);\n\n                zone.appendChild(wrapper);\n              });\n            });\n          }\n        }\n        reader.readAsText(file);\n      };\n      input.click();\n    }\n  </script>\n</body>\n</html>"}]}
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.download = document.getElementById('banummer').value + ".docx";
+      link.click();
+    }
+  </script>
+</body>
+</html>
