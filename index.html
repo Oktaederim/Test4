@@ -2,7 +2,7 @@
 <html lang="de">
 <head>
   <meta charset="UTF-8">
-  <title>Betriebsanweisung Generator v3.5 (modernisierter Kopf & Layout)</title>
+  <title>Betriebsanweisung Generator v3.9 (Rahmen bündig & Footer korrigiert)</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.9.3/html2pdf.bundle.min.js"></script>
   <style>
     body { font-family: Arial, sans-serif; margin: 0; padding: 0; background: #f5f7fa; }
@@ -10,54 +10,55 @@
     .page {
       width: 210mm;
       min-height: 297mm;
-      margin: 20px auto;
+      margin: 10mm auto;
       background: white;
       box-shadow: 0 0 8px rgba(0,0,0,0.2);
       position: relative;
-      overflow: hidden;
     }
 
+    /* Rahmen exakt bündig mit Inhalt */
     .inner-frame {
-      border: 6px solid var(--hauptfarbe, #005b99);
-      width: calc(210mm - 30mm);
-      min-height: calc(297mm - 30mm);
-      margin: 15mm;
+      border: 4px solid var(--hauptfarbe, #005b99);
+      position: absolute;
+      top: 15mm;
+      left: 15mm;
+      width: 180mm;
+      height: 267mm;
       display: flex;
       flex-direction: column;
+      justify-content: space-between;
       box-sizing: border-box;
       background: #fff;
+      padding: 0;
     }
 
-    /* Moderner Kopfbereich */
     .header {
       display: grid;
       grid-template-columns: 1fr 2fr 1fr;
       border-bottom: 3px solid var(--hauptfarbe, #005b99);
-      background: linear-gradient(90deg, #f9f9f9, #f2f8ff);
-      align-items: stretch;
+      background: #f9f9f9;
     }
 
     .header div {
       display: flex;
       flex-direction: column;
       justify-content: center;
-      padding: 8px;
+      padding: 6px;
       border-right: 2px solid var(--hauptfarbe, #005b99);
-      box-sizing: border-box;
     }
 
     .header div:last-child { border-right: none; }
 
-    .header label { font-size: 9pt; color: #333; font-weight: bold; margin-bottom: 3px; }
+    .header label { font-size: 9pt; font-weight: bold; margin-bottom: 3px; color: #333; }
+
     .header textarea, .header input {
       width: 100%;
       font-size: 10.5pt;
-      border: 1px solid #ccd;
-      border-radius: 3px;
-      padding: 4px;
+      padding: 3px;
+      border: none;
+      background: transparent;
       resize: vertical;
-      min-height: 22pt;
-      background: #fff;
+      outline: none;
     }
 
     .header .title textarea {
@@ -65,17 +66,8 @@
       font-weight: bold;
       font-size: 13pt;
       border: none;
-      resize: vertical;
       background: transparent;
-    }
-
-    .header .rechtsgrundlage textarea {
-      text-align: center;
-      font-size: 10pt;
-      color: #222;
-      border: none;
       resize: vertical;
-      background: transparent;
     }
 
     .arbeitsangaben {
@@ -86,33 +78,25 @@
       font-size: 10pt;
     }
 
-    .arbeitsangaben div { padding: 6px; border-right: 2px solid var(--hauptfarbe, #005b99); }
+    .arbeitsangaben div { padding: 5px; border-right: 2px solid var(--hauptfarbe, #005b99); }
     .arbeitsangaben div:last-child { border-right: none; }
 
-    .arbeitsangaben label { display: block; font-weight: bold; font-size: 9pt; margin-bottom: 3px; color: #333; }
+    .arbeitsangaben label { font-weight: bold; font-size: 9pt; margin-bottom: 3px; color: #333; }
+
     .arbeitsangaben textarea {
       width: 100%;
       font-size: 10pt;
-      padding: 4px;
-      border: 1px solid #ccd;
-      border-radius: 3px;
+      padding: 2px;
+      border: none;
+      background: transparent;
       resize: vertical;
-      min-height: 20pt;
-      background: #fff;
+      overflow: hidden;
     }
 
-    .content-wrapper { flex: 1; width: 100%; margin-top: 8px; }
+    .content-wrapper { flex: 1; width: 100%; margin: 0; padding: 0; }
 
-    .section { margin-bottom: 6px; width: 100%; }
-    .section h2 {
-      margin: 0;
-      background: var(--hauptfarbe, #005b99);
-      color: #fff;
-      padding: 8px;
-      font-size: 13pt;
-      font-weight: bold;
-      text-align: center;
-    }
+    .section { margin: 0; width: 100%; }
+    .section h2 { margin: 0; background: var(--hauptfarbe, #005b99); color: #fff; padding: 8px; font-size: 13pt; font-weight: bold; text-align: center; }
 
     .section .content { display: flex; align-items: flex-start; padding: 6px; }
 
@@ -125,8 +109,6 @@
       align-items: center;
       justify-content: flex-start;
       background: #f9f9f9;
-      padding: 4px;
-      border-radius: 2px;
     }
 
     .section .picto-dropzone img { max-width: 60px; margin: 4px 0; cursor: move; }
@@ -147,51 +129,43 @@
       display: flex;
       justify-content: space-between;
       align-items: center;
-      padding: 8px;
+      padding: 6px 8px;
       font-size: 10pt;
       background: #fff;
+      margin-top: auto;
+      box-sizing: border-box;
     }
 
-    .export-buttons {
-      text-align: center;
-      margin: 25px 0;
+    .footer span input { border: none; border-bottom: 1px solid #666; outline: none; background: transparent; }
+
+    @media print {
+      body { background: white; box-shadow: none; }
+      .page { box-shadow: none; margin: 0; }
+      .inner-frame { border: 4px solid var(--hauptfarbe, #005b99); }
+      .header textarea, .arbeitsangaben textarea { border: none !important; }
+      .section .picto-dropzone { border-right: none; }
     }
 
-    .export-buttons button {
-      margin: 6px;
-      padding: 6px 12px;
-      font-size: 10pt;
-      border: none;
-      border-radius: 4px;
-      cursor: pointer;
-      color: white;
-    }
-
-    #pageInfo { text-align: center; font-size: 10pt; color: #333; margin-top: 10px; }
+    .export-buttons { text-align: center; margin: 20px 0; }
+    .export-buttons button { margin: 6px; padding: 6px 12px; font-size: 10pt; border: none; border-radius: 4px; cursor: pointer; color: white; }
   </style>
 </head>
 <body>
-  <div class="color-picker" style="text-align:center; margin-top:10px;">
+  <div style="text-align:center; margin:10px;">
     <button style="background:#005b99" onclick="setBA('BetrSichV','BA-T-01','#005b99')">Maschinen (Blau)</button>
     <button style="background:#f28c00" onclick="setBA('GefStoffV','BA-G-01','#f28c00')">Gefahrstoffe (Orange)</button>
     <button style="background:#2e7d32" onclick="setBA('BioStoffV','BA-A-03','#2e7d32')">PSA/Biologisch (Grün)</button>
   </div>
 
+  <input type="file" id="pictoupload" multiple accept="image/*" onchange="previewPictos(event)" style="margin:10px;">
+  <div id="pictoPreview" style="text-align:center;"><p>Ziehen Sie die hochgeladenen Piktogramme in die Abschnitte.</p></div>
+
   <div id="baPage" class="page">
     <div class="inner-frame">
       <div class="header">
-        <div>
-          <label>Betrieb:</label>
-          <textarea placeholder="Betrieb"></textarea>
-        </div>
-        <div class="title">
-          <textarea id="baTitle">BETRIEBSANWEISUNG v3.5</textarea>
-          <textarea id="rechtsgrundlage">gem. BetrSichV</textarea>
-        </div>
-        <div>
-          <label>Nr.:</label>
-          <textarea id="banummer">BA-T-01</textarea>
-        </div>
+        <div><label>Betrieb:</label><textarea placeholder="Betrieb"></textarea></div>
+        <div class="title"><textarea id="baTitle">BETRIEBSANWEISUNG v3.9</textarea><textarea id="rechtsgrundlage">gem. BetrSichV</textarea></div>
+        <div><label>Nr.:</label><textarea id="banummer">BA-T-01</textarea></div>
       </div>
 
       <div class="arbeitsangaben">
@@ -223,6 +197,53 @@
   </div>
 
   <script>
+    function allowDrop(ev) { ev.preventDefault(); }
+
+    function dropPicto(ev, section) {
+      ev.preventDefault();
+      const data = ev.dataTransfer.getData('text/plain');
+      if (data) {
+        const img = document.createElement('img');
+        img.src = data;
+        img.draggable = true;
+        img.ondragstart = function(ev) { ev.dataTransfer.setData('text/plain', img.src); };
+        section.querySelector('.picto-dropzone').appendChild(img);
+      }
+    }
+
+    function previewPictos(event) {
+      const preview = document.getElementById('pictoPreview');
+      preview.innerHTML = '';
+      Array.from(event.target.files).forEach(file => {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+          const img = document.createElement('img');
+          img.src = e.target.result;
+          img.draggable = true;
+          img.ondragstart = function(ev) { ev.dataTransfer.setData('text/plain', e.target.result); };
+          preview.appendChild(img);
+        }
+        reader.readAsDataURL(file);
+      });
+    }
+
+    function exportPDF() {
+      const element = document.getElementById('baPage');
+      const opt = { filename: document.getElementById('banummer').value + '.pdf', image: { type: 'jpeg', quality: 0.98 }, html2canvas: { scale: 2 }, jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' } };
+      html2pdf().set(opt).from(element).save();
+    }
+
+    async function exportDOCX() {
+      const { Document, Packer, Paragraph, TextRun } = window.docx;
+      const title = document.getElementById('baTitle').value || 'Betriebsanweisung';
+      const doc = new Document({ sections: [{ children: [ new Paragraph({ children: [ new TextRun({ text: title, bold: true, size: 28 }) ] }) ] }] });
+      const blob = await Packer.toBlob(doc);
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = document.getElementById('banummer').value + '.docx';
+      link.click();
+    }
+
     function setBA(grundlage, nummer, farbe) {
       document.documentElement.style.setProperty('--hauptfarbe', farbe);
       document.getElementById('rechtsgrundlage').value = 'gem. ' + grundlage;
